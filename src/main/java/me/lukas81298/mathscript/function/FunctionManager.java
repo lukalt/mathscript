@@ -22,6 +22,12 @@ public class FunctionManager {
         this.functionMap.put( "read", new ReadFunctions.ReadFunction() );
         this.functionMap.put( "readln", new ReadFunctions.ReadLnFunction() );
 
+        this.register( new ParseFunctions.ToStringFunction(), "tostring" );
+        this.register( new ParseFunctions.ParseDoubleFunction(), "parsedouble" );
+        this.register( new ParseFunctions.ParseIntFunction(), "parseint" );
+        this.register( new ParseFunctions.ParseFloatFunction(), "parsefloat" );
+        this.register( new ParseFunctions.ParseLongFunction(), "parselong" );
+
         // comparisons
         this.functionMap.put( "==", new CompareInfixFunctions.EqualsFunction() );
         this.functionMap.put( "!=", new CompareInfixFunctions.NotEqualsFunction() );
@@ -70,14 +76,20 @@ public class FunctionManager {
         this.functionMap.put( "matrixswap", new MatrixFunctions.MatrixSwapFunction() );
     }
 
-    public Object executeFunction( ScriptExecutor executor, String name, Object... parameters ) throws ScriptException  {
+    public void register( Function function, String... names ) {
+        for ( String name : names ) {
+            this.functionMap.put( name.toLowerCase(), function );
+        }
+    }
+
+    public Object executeFunction( ScriptExecutor executor, String name, Object... parameters ) throws ScriptException {
         name = name.toLowerCase();
         Function f = this.functionMap.get( name );
-        if( f == null ) {
+        if ( f == null ) {
             throw new ScriptException( "Undefined function " + name );
         }
-        if( !f.acceptsArgumentLength( parameters.length ) ) {
-            throw new ScriptException( "Cannot run function " + name + " with " + parameters.length + " parameters"  );
+        if ( !f.acceptsArgumentLength( parameters.length ) ) {
+            throw new ScriptException( "Cannot run function " + name + " with " + parameters.length + " parameters" );
         }
         return f.execute( executor, parameters );
     }
