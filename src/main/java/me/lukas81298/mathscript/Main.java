@@ -20,7 +20,7 @@ public class Main {
         } catch ( FileNotFoundException e ) {
             e.printStackTrace();
         } catch ( ScriptException e ) {
-            e.printStackTrace();
+            //e.printStackTrace();
             System.out.println( "Error executing script: " + e.getMessage() );
         } catch ( Throwable t ) {
             t.printStackTrace();

@@ -116,6 +116,28 @@ public class ScriptExecutor {
         }
     }
 
+    private void parseWhileBlock( String condition ) throws ScriptException {
+        int index = this.scanner.index(); // store the pc of the while statement
+        outer:
+        while ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) {
+            while ( this.scanner.hasNextLine() ) {
+                String line = stripComment( this.scanner.nextLine().trim() );
+                if ( line.toLowerCase().equals( "done" ) ) {
+                    this.scanner.jump( index );
+                    continue outer;
+                }
+                parseLine( line );
+            }
+            throw new ScriptException( "Unexpected end of file, missing done statement" );
+        }
+        while ( scanner.hasNextLine() ) {
+            if( !scanner.nextLine().toLowerCase().equals( "done" ) ) {
+                continue;
+            }
+            break;
+        }
+    }
+
     private void parseIfBlock( String condition ) throws ScriptException {
         if ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) { // eval expression and check if it is true
             boolean inElse = false;
@@ -162,15 +184,15 @@ public class ScriptExecutor {
     }
 
     public void parseLine( String line ) throws ScriptException {
-    //    System.out.println( "Parse line " + line );
+        //    System.out.println( "Parse line " + line );
         if ( line.equals( "/*" ) ) {
             do {
-                line = scanner.nextLine().trim();
-                if( !scanner.hasNextLine() ) {
-                    return;
+                if ( !scanner.hasNextLine() ) {
+                    throw new ScriptException( "Unexpected end of file, missing */" );
                 }
+                line = scanner.nextLine().trim();
             } while ( !line.equalsIgnoreCase( "*/" ) );
-            if( !scanner.hasNextLine() ) {
+            if ( !scanner.hasNextLine() ) {
                 return;
             }
             line = scanner.nextLine().trim();
@@ -187,7 +209,12 @@ public class ScriptExecutor {
                 if ( ifMatched.matches() ) {
                     parseIfBlock( ifMatched.group( 1 ) );
                 } else {
-                    evalExpression( line );
+                    Matcher whileMatched = whilePattern.matcher( line );
+                    if( whileMatched.matches() ) {
+                        parseWhileBlock( whileMatched.group( 1 ) );
+                    } else {
+                        evalExpression( line );
+                    }
                 }
             }
         }

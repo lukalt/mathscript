@@ -1,5 +1,7 @@
 package me.lukas81298.mathscript.util;
 
+import me.lukas81298.mathscript.parser.ScriptException;
+
 /**
  * @author lukas
  * @since 09.06.2018
@@ -10,4 +12,9 @@ public interface ScriptScanner {
 
     String nextLine();
 
+    int index();
+
+    void branch( int index ) throws ScriptException;
+
+    void jump( int index ) throws ScriptException;
 }
