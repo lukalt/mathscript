@@ -4,6 +4,7 @@ import me.lukas81298.mathscript.Types;
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
 import me.lukas81298.mathscript.structures.matrix.Matrix;
+import me.lukas81298.mathscript.structures.matrix.MatrixParser;
 import me.lukas81298.mathscript.structures.matrix.Ring;
 
 import java.util.List;
@@ -13,6 +14,24 @@ import java.util.List;
  * @since 09.06.2018
  */
 public class MatrixFunctions {
+
+    public static final class MatrixParseFunction implements Function {
+
+        @Override
+        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+            return MatrixParser.parse( Types.ensureType( arguments[0], String.class, false ) );
+        }
+
+        @Override
+        public Class<?> mapsTo() {
+            return Matrix.class;
+        }
+
+        @Override
+        public boolean acceptsArgumentLength( int i ) {
+            return i == 1;
+        }
+    }
 
     public static final class MatrixAddFunction implements Function {
 

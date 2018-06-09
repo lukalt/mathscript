@@ -88,7 +88,7 @@ public class Matrix<T> {
     }
 
     public Matrix<T> addClone(Matrix<T> m) {
-        return this.clone().addClone(m);
+        return this.clone().add(m);
     }
 
     public Matrix<T> add(Matrix<T> m) {

@@ -15,7 +15,7 @@ public class MatrixParser {
     public final static Function<String, Short> PARSE_SHORT = string -> Short.parseShort(string);
 
     public static <T> Matrix<T> parse(String s, Function<String, T> function) {
-        return parse(s.split("\n"), function);
+        return parse(s.split("\\|"), function);
     }
 
     public static Matrix<Double> parse(String s) {

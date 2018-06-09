@@ -87,6 +87,7 @@ public class FunctionManager {
         this.functionMap.put( "matrix", new MatrixFunctions.MatrixCreationFunction() );
         this.functionMap.put( "transpose", new BasicInfixFunction.TransposeFunction() );
         this.functionMap.put( "matrixswap", new MatrixFunctions.MatrixSwapFunction() );
+        this.register( MatrixFunctions.MatrixParseFunction.class, "matrixparse" );
     }
 
     public void register( Class<? extends Function> function, String... names ) {

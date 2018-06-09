@@ -6,8 +6,8 @@ import me.lukas81298.mathscript.struct.InternalArrayList;
 import me.lukas81298.mathscript.struct.InternalHashSet;
 import me.lukas81298.mathscript.struct.Tuple;
 import me.lukas81298.mathscript.util.ScriptFunction;
+import me.lukas81298.mathscript.util.ScriptScanner;
 
-import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,9 +18,10 @@ import java.util.regex.Pattern;
  */
 public class ScriptExecutor {
 
-    private final Scanner scanner;
+    private final ScriptScanner scanner;
     private final Pattern letPattern = Pattern.compile( "(let|var|define) ([A-Za-z_][A-Za-z0-1_]{0,127}) *= *(.+)" );
     private final Pattern ifPattern = Pattern.compile( "if ?(.*)" );
+    private final Pattern whilePattern = Pattern.compile( "while ?(.*)" );
 
     private final Map<Pattern, ScriptFunction<Matcher, Object>> patterns = new LinkedHashMap<>();
 
@@ -28,9 +29,15 @@ public class ScriptExecutor {
 
     private final Map<String, Object> scopedDefinedVariables = new HashMap<>();
 
-    public ScriptExecutor( InputStream inputStream ) {
-        this.scanner = new Scanner( inputStream );
+    public ScriptExecutor( ScriptScanner scriptScanner ) {
+        this( scriptScanner, null );
+    }
 
+    public ScriptExecutor( ScriptScanner scanner, Map<String, Object> variables ) {
+        this.scanner = scanner;
+        if( variables != null ) {
+            this.scopedDefinedVariables.putAll( variables );
+        }
         this.registerPattern( "\\[(.*)\\]", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher matcher ) throws ScriptException {
@@ -102,27 +109,38 @@ public class ScriptExecutor {
     }
 
     public void parse() throws ScriptException {
-        this.parse( State.NORMAL );
+        this.parse( State.NORMAL, State.NORMAL );
     }
 
-    private void parse( State state ) throws ScriptException {
-        if ( !scanner.hasNextLine() ) {
+    private void parse( State state, State prev ) throws ScriptException {
+        if ( !scanner.hasNextLine() ) { // eof
+            if ( state != State.NORMAL ) {
+                throw new ScriptException( "Unexpected end of script, expected normal but got " + state.name() );
+            }
             return;
         }
         String line = scanner.nextLine().trim();
+        if(line.equals( "/*" ) ) {
+            do {
+                line = scanner.nextLine().trim();
+            } while (!line.equalsIgnoreCase( "*/" ) );
+            line = scanner.nextLine().trim();
+        }
         int firstComment = line.indexOf( "//" );
         if ( firstComment >= 0 ) {
             line = line.substring( 0, firstComment ).trim();
         }
         if ( !line.isEmpty() ) {
             if ( line.equalsIgnoreCase( "endif" ) || line.equalsIgnoreCase( "fi" ) ) {
-                state = State.NORMAL;
-            } else if ( state == State.IF && line.equalsIgnoreCase( "else" ) ) {
-                String l = scanner.nextLine().trim();
-                while ( !( l.equalsIgnoreCase( "endif" ) || l.equalsIgnoreCase( "fi" ) ) ) {
-                    l = scanner.nextLine().trim();
+                state = prev;
+                prev = State.NORMAL;
+            } else if ( ( state == State.IF || state == State.IF_SKIP ) && line.equalsIgnoreCase( "else" ) ) {
+                if ( state == State.IF_SKIP ) {
+                    state = State.ELSE;
+                } else {
+                    state = State.ELSE_SKIP;
                 }
-            } else {
+            } else if ( state != State.ELSE_SKIP && state != State.IF_SKIP ) {
                 Matcher matcher = letPattern.matcher( line );
                 if ( matcher.find() ) {
                     String varName = matcher.group( 2 );
@@ -131,18 +149,11 @@ public class ScriptExecutor {
                 } else {
                     Matcher ifMatched = ifPattern.matcher( line );
                     if ( ifMatched.matches() ) {
+                        prev = state;
                         if ( Objects.equals( true, parseExpression( ifMatched.group( 1 ) ) ) ) {
                             state = State.IF;
                         } else {
-                            String nextLine = scanner.nextLine().trim();
-                            while ( !nextLine.equalsIgnoreCase( "else" ) && !nextLine.equalsIgnoreCase( "endif" ) && !nextLine.equalsIgnoreCase( "fi" ) ) {
-                                nextLine = scanner.nextLine().trim();
-                            }
-                            if ( nextLine.equalsIgnoreCase( "else" ) ) {
-                                state = State.ELSE;
-                            } else {
-                                state = State.NORMAL;
-                            }
+                            state = State.IF_SKIP;
                         }
                     } else {
                         parseExpression( line );
@@ -151,7 +162,7 @@ public class ScriptExecutor {
             }
         }
 
-        this.parse( state );
+        this.parse( state, prev );
     }
 
     public Map<String, Object> getVariables() {
@@ -178,17 +189,16 @@ public class ScriptExecutor {
             return null;
         }
 
+        if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) {
+            return s.length() == 2 ? "" : s.substring( 1, s.length() - 1 );
+        }
+
         for ( Map.Entry<Pattern, ScriptFunction<Matcher, Object>> entry : this.patterns.entrySet() ) {
             Matcher matcher = entry.getKey().matcher( s );
             if ( matcher.matches() ) {
                 return entry.getValue().apply( matcher );
             }
         }
-
-        if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) {
-            return s.length() == 2 ? "" : s.substring( 1, s.length() - 1 );
-        }
-
 
         if ( scopedDefinedVariables.containsKey( s ) ) {
             return scopedDefinedVariables.get( s );
@@ -198,11 +208,10 @@ public class ScriptExecutor {
             s = s.substring( 0, s.length() - 1 );
             return executeFunction( "fac", parseExpression( s ) );
         }
-        if(s.startsWith( "!" )) {
+        if ( s.startsWith( "!" ) ) {
             s = s.substring( 1 );
             return executeFunction( "neg", parseExpression( s ) );
         }
-
         throw new ScriptException( "Invalid statement or undefined variable " + s );
     }
 

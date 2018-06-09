@@ -2,6 +2,7 @@ package me.lukas81298.mathscript;
 
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.util.ScriptScannerStream;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,7 +16,7 @@ public class Main {
 
     public static void main( String[] args ) {
         try {
-            new ScriptExecutor( new FileInputStream( new File( "D:\\Dokumente\\projects\\mathscript\\testScript.ms" ) ) ).parse();
+            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "la5.ms" ) ) ) ).parse();
         } catch ( FileNotFoundException e ) {
             e.printStackTrace();
         } catch ( ScriptException e ) {

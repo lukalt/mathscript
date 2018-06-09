@@ -7,5 +7,7 @@ package me.lukas81298.mathscript.parser;
 public enum State {
     NORMAL,
     IF,
-    ELSE
+    ELSE,
+    ELSE_SKIP,
+    IF_SKIP
 }
