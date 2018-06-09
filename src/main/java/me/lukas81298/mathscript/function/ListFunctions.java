@@ -11,6 +11,7 @@ import java.util.*;
  * @author lukas
  * @since 08.06.2018
  */
+@SuppressWarnings( "unchecked" )
 public class ListFunctions {
 
     public static class ListFunction implements Function {
@@ -26,11 +27,73 @@ public class ListFunctions {
         }
     }
 
+    public static class ListPopFunction implements Function {
+
+        @Override
+        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+            List list = Types.ensureType( arguments[0], List.class, false );
+            if(list.isEmpty()) {
+                return null;
+            }
+            return list.remove( 0 );
+        }
+
+        @Override
+        public Class<?> mapsTo() {
+            return Object.class;
+        }
+
+        @Override
+        public boolean acceptsArgumentLength( int i ) {
+            return i == 1;
+        }
+    }
+
+    public static class ListContainsFunction implements Function {
+
+        @Override
+        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+            List list = Types.ensureType( arguments[0], List.class, false );
+            Object o = Types.ensureNotNull( arguments[1] );
+            return list.contains( o );
+        }
+
+        @Override
+        public Class<?> mapsTo() {
+            return Object.class;
+        }
+
+        @Override
+        public boolean acceptsArgumentLength( int i ) {
+            return i == 2;
+        }
+    }
+
+    public static class ListGetFunction implements Function {
+
+        @Override
+        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+            List list = Types.ensureType( arguments[0], List.class, false );
+            int index = Types.ensureType( arguments[0], Number.class, false ).intValue();
+            return list.get( index );
+        }
+
+        @Override
+        public Class<?> mapsTo() {
+            return Object.class;
+        }
+
+        @Override
+        public boolean acceptsArgumentLength( int i ) {
+            return i == 2;
+        }
+    }
+
     public static class ListAddFunction implements Function {
 
         @Override
         public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
-            List<Object> list = Types.ensureType( arguments[0], List.class, false );
+            List list = Types.ensureType( arguments[0], List.class, false );
             list.add( arguments[1] );
             return list;
         }

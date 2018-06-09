@@ -2,6 +2,7 @@ package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.util.SneakyThrow;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,16 +18,15 @@ public class FunctionManager {
     public FunctionManager() {
 
         // i/o
-        this.functionMap.put( "print", new PrintFunction() );
-        this.functionMap.put( "println", new PrintlnFunction() );
-        this.functionMap.put( "read", new ReadFunctions.ReadFunction() );
-        this.functionMap.put( "readln", new ReadFunctions.ReadLnFunction() );
-
-        this.register( new ParseFunctions.ToStringFunction(), "tostring" );
-        this.register( new ParseFunctions.ParseDoubleFunction(), "parsedouble" );
-        this.register( new ParseFunctions.ParseIntFunction(), "parseint" );
-        this.register( new ParseFunctions.ParseFloatFunction(), "parsefloat" );
-        this.register( new ParseFunctions.ParseLongFunction(), "parselong" );
+        this.register( PrintFunction.class, "print" );
+        this.register( PrintlnFunction.class, "println" );
+        this.register( ReadFunctions.ReadFunction.class, "read" );
+        this.register( ReadFunctions.ReadLnFunction.class, "readln" );
+        this.register( ParseFunctions.ToStringFunction.class, "tostring" );
+        this.register( ParseFunctions.ParseDoubleFunction.class, "parsedouble" );
+        this.register( ParseFunctions.ParseIntFunction.class, "parseint" );
+        this.register( ParseFunctions.ParseFloatFunction.class, "parsefloat" );
+        this.register( ParseFunctions.ParseLongFunction.class, "parselong" );
 
         // comparisons
         this.functionMap.put( "==", new CompareInfixFunctions.EqualsFunction() );
@@ -48,7 +48,17 @@ public class FunctionManager {
         this.functionMap.put( "pow", new BasicMathFunction.PowFunction() );
         this.functionMap.put( "^", new BasicMathFunction.PowFunction() );
         this.functionMap.put( "sqrt", new BasicMathFunction.SqrtFunction() );
-        this.functionMap.put( "fac", new FacFunction() );
+        this.register( FacFunction.class, "fac" );
+
+        this.register( BasicMathFunction.SqrtFunction.class, "sqrt" );
+        this.register( BasicMathFunction.SqrtFunction.class, "sqrt" );
+        this.register( BasicMathFunction.ExpFunction.class, "exp" );
+        this.register( BasicMathFunction.AbsFunction.class, "abs" );
+        this.register( BasicMathFunction.SgnFunction.class, "sgn" );
+        this.register( BasicMathFunction.LnFunction.class, "ln" );
+        this.register( BasicMathFunction.LogFunction.class, "log" );
+        this.register( MaxFunction.class, "max" );
+        this.register( MinFunction.class, "min" );
 
         // generic functions
         this.functionMap.put( "length", new LengthFunction() );
@@ -65,6 +75,9 @@ public class FunctionManager {
         this.functionMap.put( "listdsort", new ListFunctions.ListDSortFunction() );
         this.functionMap.put( "listrev", new ListFunctions.ListReverseFunction() );
         this.functionMap.put( "listcopy", new ListFunctions.ListCopyFunction() );
+        this.register( ListFunctions.ListPopFunction.class, "listpop" );
+        this.register( ListFunctions.ListContainsFunction.class, "listcontains" );
+        this.register( ListFunctions.ListGetFunction.class, "listget" );
 
         // string ops
         this.functionMap.put( "substring", new StringFunctions.SubstringFunction() );
@@ -76,9 +89,16 @@ public class FunctionManager {
         this.functionMap.put( "matrixswap", new MatrixFunctions.MatrixSwapFunction() );
     }
 
-    public void register( Function function, String... names ) {
+    public void register( Class<? extends Function> function, String... names ) {
+        Function functionInst;
+        try {
+             functionInst = function.newInstance();
+        } catch ( InstantiationException | IllegalAccessException e ) {
+            SneakyThrow.throwSneaky( e );
+            return;
+        }
         for ( String name : names ) {
-            this.functionMap.put( name.toLowerCase(), function );
+            this.functionMap.put( name.toLowerCase(), functionInst );
         }
     }
 

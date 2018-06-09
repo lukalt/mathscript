@@ -1,12 +1,14 @@
 package me.lukas81298.mathscript.struct;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
  * @author lukas
  * @since 08.06.2018
  */
-public class Tuple {
+public class Tuple implements Iterable {
 
     private final Object[] data;
 
@@ -40,6 +42,11 @@ public class Tuple {
         }
         stringBuilder.append( ")" );
         return stringBuilder.toString();
+    }
+
+    @Override
+    public Iterator iterator() {
+        return Arrays.asList( this.data ).iterator();
     }
 
 }
