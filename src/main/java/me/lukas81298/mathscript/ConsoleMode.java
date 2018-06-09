@@ -14,7 +14,7 @@ public class ConsoleMode {
         ScriptExecutor executor = new ScriptExecutor( new ScriptScannerStream( System.in ) );
         while ( true ) {
             try {
-                executor.parse();
+                executor.execute();
             } catch ( ScriptException e ) {
                 e.printStackTrace();
             }

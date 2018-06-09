@@ -1,12 +1,15 @@
 package me.lukas81298.mathscript.parser;
 
 import me.lukas81298.mathscript.Types;
+import me.lukas81298.mathscript.function.Function;
 import me.lukas81298.mathscript.function.FunctionManager;
+import me.lukas81298.mathscript.function.udf.UserDefinedFunction;
 import me.lukas81298.mathscript.struct.InternalArrayList;
 import me.lukas81298.mathscript.struct.InternalHashSet;
 import me.lukas81298.mathscript.struct.Tuple;
 import me.lukas81298.mathscript.util.ScriptFunction;
 import me.lukas81298.mathscript.util.ScriptScanner;
+import me.lukas81298.mathscript.util.StringChecker;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -20,21 +23,26 @@ public class ScriptExecutor {
 
     private final ScriptScanner scanner;
     private final Pattern letPattern = Pattern.compile( "(let|var|define) ([A-Za-z_][A-Za-z0-1_]{0,127}) *= *(.+)" );
-    private final Pattern ifPattern = Pattern.compile( "if ?(.*)" );
-    private final Pattern whilePattern = Pattern.compile( "while ?(.*)" );
+
+    private final Pattern functionPattern = Pattern.compile( "function ([a-zA-Z_][a-zA-Z0-9_]*)\\((.*)\\)" );
 
     private final Map<Pattern, ScriptFunction<Matcher, Object>> patterns = new LinkedHashMap<>();
 
-    private final FunctionManager functionManager = new FunctionManager();
+    private final FunctionManager functionManager;
 
     private final Map<String, Object> scopedDefinedVariables = new HashMap<>();
 
     public ScriptExecutor( ScriptScanner scriptScanner ) {
-        this( scriptScanner, null );
+        this( scriptScanner, null, null );
     }
 
-    public ScriptExecutor( ScriptScanner scanner, Map<String, Object> variables ) {
+    public ScriptExecutor( ScriptScanner scanner, Map<String, Object> variables, Map<String, Function> functions ) {
         this.scanner = scanner;
+        if( functions == null ) {
+            this.functionManager = new FunctionManager();
+        } else {
+            this.functionManager = new FunctionManager( functions );
+        }
         if ( variables != null ) {
             this.scopedDefinedVariables.putAll( variables );
         }
@@ -109,14 +117,19 @@ public class ScriptExecutor {
     }
 
 
-    public void parse() throws ScriptException {
+    public Object execute() throws ScriptException {
         while ( this.scanner.hasNextLine() ) {
             String line = scanner.nextLine();
-            parseLine( line );
+            try {
+                parseLine( line );
+            } catch ( ReturnValueException e ) {
+                return e.getResult();
+            }
         }
+        return null;
     }
 
-    private void parseWhileBlock( String condition ) throws ScriptException {
+    private void parseWhileBlock( String condition ) throws ScriptException, ReturnValueException {
         int index = this.scanner.index(); // store the pc of the while statement
         outer:
         while ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) {
@@ -131,14 +144,14 @@ public class ScriptExecutor {
             throw new ScriptException( "Unexpected end of file, missing done statement" );
         }
         while ( scanner.hasNextLine() ) {
-            if( !scanner.nextLine().toLowerCase().equals( "done" ) ) {
+            if ( !scanner.nextLine().toLowerCase().equals( "done" ) ) {
                 continue;
             }
             break;
         }
     }
 
-    private void parseIfBlock( String condition ) throws ScriptException {
+    private void parseIfBlock( String condition ) throws ScriptException, ReturnValueException {
         if ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) { // eval expression and check if it is true
             boolean inElse = false;
             while ( this.scanner.hasNextLine() ) {
@@ -183,8 +196,8 @@ public class ScriptExecutor {
         return line;
     }
 
-    public void parseLine( String line ) throws ScriptException {
-        //    System.out.println( "Parse line " + line );
+    public void parseLine( String line ) throws ScriptException, ReturnValueException {
+      //  System.out.println( "Parse line " + line );
         if ( line.equals( "/*" ) ) {
             do {
                 if ( !scanner.hasNextLine() ) {
@@ -197,7 +210,7 @@ public class ScriptExecutor {
             }
             line = scanner.nextLine().trim();
         }
-        line = stripComment( line );
+        line = stripComment( line ).trim();
         if ( !line.isEmpty() ) {
             Matcher matcher = letPattern.matcher( line );
             if ( matcher.find() ) {
@@ -205,19 +218,60 @@ public class ScriptExecutor {
                 Object value = evalExpression( matcher.group( 3 ) );
                 scopedDefinedVariables.put( varName, value );
             } else {
-                Matcher ifMatched = ifPattern.matcher( line );
-                if ( ifMatched.matches() ) {
-                    parseIfBlock( ifMatched.group( 1 ) );
+                String lowerLine = line.toLowerCase();
+                if ( lowerLine.startsWith( "if " ) ) {
+                    parseIfBlock( line.substring( "if ".length() ) );
+                } else if ( lowerLine.startsWith( "while " ) ) {
+                    parseWhileBlock( line.substring( "while ".length() ) );
+                } else if( lowerLine.equals( "return" ) ) {
+                    throw new ReturnValueException( null );
+                } else if( lowerLine.startsWith( "return " ) ) {
+                    throw new ReturnValueException( evalExpression( line.substring( "return ".length() ) ) );
                 } else {
-                    Matcher whileMatched = whilePattern.matcher( line );
-                    if( whileMatched.matches() ) {
-                        parseWhileBlock( whileMatched.group( 1 ) );
+                    Matcher matcher1 = functionPattern.matcher( line.trim() );
+                    if ( matcher1.matches() ) {
+                        parseFunction( matcher1.group( 1 ), matcher1.group( 2 ) );
                     } else {
                         evalExpression( line );
                     }
                 }
             }
         }
+    }
+
+
+    private String[] parseArgumentNames( String raw ) throws ScriptException {
+        String[] split = raw.split( "," );
+        String[] o = new String[split.length];
+        int i = 0;
+        for ( String s : split ) {
+            s = s.trim();
+            if ( s.isEmpty() || !StringChecker.isCorrectVariableName( s ) ) {
+                throw new ScriptException( "Invalid variable name " + s );
+            }
+            o[i] = s;
+            i++;
+        }
+        return o;
+    }
+
+    private void parseFunction( String functionName, String rawArguments ) throws ScriptException {
+        if ( this.functionManager.isFunctionPresent( functionName ) ) {
+            throw new ScriptException( "Function " + functionName + " is already registered" );
+        }
+        functionName = functionName.toLowerCase();
+        String[] argumentNames = parseArgumentNames( rawArguments );
+        List<String> scanned = new LinkedList<>();
+        while ( this.scanner.hasNextLine() ) {
+            String line = this.scanner.nextLine();
+            if ( line.trim().toLowerCase().equals( "end function" ) ) {
+                this.functionManager.register( new UserDefinedFunction( functionName, scanned.toArray( new String[0] ), argumentNames,  functionManager.getFunctions() ), functionName );
+                return;
+            } else {
+                scanned.add( line );
+            }
+        }
+        throw new ScriptException( "Unexpected end of file, expected 'end function'" );
     }
 
     public Map<String, Object> getVariables() {

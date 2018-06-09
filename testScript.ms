@@ -1,4 +1,5 @@
 // Testing basic if blocks
+println("a")
 let a = 1
 let b = 1
 

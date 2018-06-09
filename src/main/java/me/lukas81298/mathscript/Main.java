@@ -16,11 +16,11 @@ public class Main {
 
     public static void main( String[] args ) {
         try {
-            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "testScript.ms" ) ) ) ).parse();
+            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "functionTest.ms" ) ) ) ).execute();
         } catch ( FileNotFoundException e ) {
             e.printStackTrace();
         } catch ( ScriptException e ) {
-            //e.printStackTrace();
+            e.printStackTrace();
             System.out.println( "Error executing script: " + e.getMessage() );
         } catch ( Throwable t ) {
             t.printStackTrace();
