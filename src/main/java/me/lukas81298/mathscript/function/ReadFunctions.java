@@ -42,7 +42,7 @@ public class ReadFunctions {
                 System.out.print( Types.ensureType( arguments[0], String.class, false ) + ": " );
             }
             Scanner scanner = new Scanner( System.in );
-            return env.parseExpression( scanner.nextLine() );
+            return env.evalExpression( scanner.nextLine() );
         }
 
         @Override

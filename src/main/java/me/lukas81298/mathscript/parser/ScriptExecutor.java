@@ -35,7 +35,7 @@ public class ScriptExecutor {
 
     public ScriptExecutor( ScriptScanner scanner, Map<String, Object> variables ) {
         this.scanner = scanner;
-        if( variables != null ) {
+        if ( variables != null ) {
             this.scopedDefinedVariables.putAll( variables );
         }
         this.registerPattern( "\\[(.*)\\]", new ScriptFunction<Matcher, Object>() {
@@ -45,7 +45,7 @@ public class ScriptExecutor {
                 final String[] split = elements.split( "," );
                 List<Object> list = new InternalArrayList<>();
                 for ( String s : split ) {
-                    list.add( parseExpression( s ) );
+                    list.add( evalExpression( s ) );
                 }
                 return list;
             }
@@ -61,7 +61,7 @@ public class ScriptExecutor {
                 } else {
                     argsTypes = new Object[argsRaw.length];
                     for ( int i = 0; i < argsRaw.length; i++ ) {
-                        argsTypes[i] = parseExpression( argsRaw[i] );
+                        argsTypes[i] = evalExpression( argsRaw[i] );
                     }
                 }
                 return executeFunction( functionName, argsTypes );
@@ -74,7 +74,7 @@ public class ScriptExecutor {
                 final String[] split = elements.split( "," );
                 Tuple tuple = new Tuple( split.length );
                 for ( int i = 0; i < split.length; i++ ) {
-                    tuple.set( i, parseExpression( split[i] ) );
+                    tuple.set( i, evalExpression( split[i] ) );
                 }
                 return tuple;
             }
@@ -86,7 +86,7 @@ public class ScriptExecutor {
                 final String[] split = elements.split( "," );
                 Set<Object> set = new InternalHashSet<>();
                 for ( String s : split ) {
-                    set.add( parseExpression( s ) );
+                    set.add( evalExpression( s ) );
                 }
                 return set;
             }
@@ -98,7 +98,7 @@ public class ScriptExecutor {
                 String left = infixMatcher.group( 1 );
                 String op = infixMatcher.group( 3 );
                 String right = infixMatcher.group( 4 );
-                return executeFunction( op, parseExpression( left ), parseExpression( right ) );
+                return executeFunction( op, evalExpression( left ), evalExpression( right ) );
             }
         } );
 
@@ -108,61 +108,89 @@ public class ScriptExecutor {
         this.patterns.put( Pattern.compile( pattern ), function );
     }
 
+
     public void parse() throws ScriptException {
-        this.parse( State.NORMAL, State.NORMAL );
+        while ( this.scanner.hasNextLine() ) {
+            String line = scanner.nextLine();
+            parseLine( line );
+        }
     }
 
-    private void parse( State state, State prev ) throws ScriptException {
-        if ( !scanner.hasNextLine() ) { // eof
-            if ( state != State.NORMAL ) {
-                throw new ScriptException( "Unexpected end of script, expected normal but got " + state.name() );
+    private void parseIfBlock( String condition ) throws ScriptException {
+        if ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) { // eval expression and check if it is true
+            boolean inElse = false;
+            while ( this.scanner.hasNextLine() ) {
+                String line = scanner.nextLine().trim();
+                String lowerCase = line.toLowerCase();
+                if ( lowerCase.equals( "else" ) ) {
+                    inElse = true;
+                    continue;
+                }
+                if ( lowerCase.equals( "fi" ) ) {
+                    return;
+                }
+                if ( !inElse ) {
+                    parseLine( line );
+                }
             }
-            return;
+        } else {
+            boolean inElse = false;
+            while ( this.scanner.hasNextLine() ) {
+                String line = scanner.nextLine().trim();
+                String lowerCase = line.toLowerCase();
+                if ( lowerCase.equals( "else" ) ) {
+                    inElse = true;
+                    continue;
+                }
+                if ( lowerCase.equals( "fi" ) ) {
+                    return;
+                }
+                if ( inElse ) {
+                    parseLine( line );
+                }
+            }
         }
-        String line = scanner.nextLine().trim();
-        if(line.equals( "/*" ) ) {
-            do {
-                line = scanner.nextLine().trim();
-            } while (!line.equalsIgnoreCase( "*/" ) );
-            line = scanner.nextLine().trim();
-        }
+
+    }
+
+    private String stripComment( String line ) {
         int firstComment = line.indexOf( "//" );
         if ( firstComment >= 0 ) {
             line = line.substring( 0, firstComment ).trim();
         }
-        if ( !line.isEmpty() ) {
-            if ( line.equalsIgnoreCase( "endif" ) || line.equalsIgnoreCase( "fi" ) ) {
-                state = prev;
-                prev = State.NORMAL;
-            } else if ( ( state == State.IF || state == State.IF_SKIP ) && line.equalsIgnoreCase( "else" ) ) {
-                if ( state == State.IF_SKIP ) {
-                    state = State.ELSE;
-                } else {
-                    state = State.ELSE_SKIP;
+        return line;
+    }
+
+    public void parseLine( String line ) throws ScriptException {
+    //    System.out.println( "Parse line " + line );
+        if ( line.equals( "/*" ) ) {
+            do {
+                line = scanner.nextLine().trim();
+                if( !scanner.hasNextLine() ) {
+                    return;
                 }
-            } else if ( state != State.ELSE_SKIP && state != State.IF_SKIP ) {
-                Matcher matcher = letPattern.matcher( line );
-                if ( matcher.find() ) {
-                    String varName = matcher.group( 2 );
-                    Object value = parseExpression( matcher.group( 3 ) );
-                    scopedDefinedVariables.put( varName, value );
+            } while ( !line.equalsIgnoreCase( "*/" ) );
+            if( !scanner.hasNextLine() ) {
+                return;
+            }
+            line = scanner.nextLine().trim();
+        }
+        line = stripComment( line );
+        if ( !line.isEmpty() ) {
+            Matcher matcher = letPattern.matcher( line );
+            if ( matcher.find() ) {
+                String varName = matcher.group( 2 );
+                Object value = evalExpression( matcher.group( 3 ) );
+                scopedDefinedVariables.put( varName, value );
+            } else {
+                Matcher ifMatched = ifPattern.matcher( line );
+                if ( ifMatched.matches() ) {
+                    parseIfBlock( ifMatched.group( 1 ) );
                 } else {
-                    Matcher ifMatched = ifPattern.matcher( line );
-                    if ( ifMatched.matches() ) {
-                        prev = state;
-                        if ( Objects.equals( true, parseExpression( ifMatched.group( 1 ) ) ) ) {
-                            state = State.IF;
-                        } else {
-                            state = State.IF_SKIP;
-                        }
-                    } else {
-                        parseExpression( line );
-                    }
+                    evalExpression( line );
                 }
             }
         }
-
-        this.parse( state, prev );
     }
 
     public Map<String, Object> getVariables() {
@@ -173,7 +201,7 @@ public class ScriptExecutor {
         return this.functionManager.executeFunction( this, name, args );
     }
 
-    public Object parseExpression( String s ) throws ScriptException {
+    public Object evalExpression( String s ) throws ScriptException {
         s = s.trim();
         Number number = Types.checkIfNumber( s );
         if ( number != null ) {
@@ -206,11 +234,11 @@ public class ScriptExecutor {
 
         if ( s.endsWith( "!" ) ) {
             s = s.substring( 0, s.length() - 1 );
-            return executeFunction( "fac", parseExpression( s ) );
+            return executeFunction( "fac", evalExpression( s ) );
         }
         if ( s.startsWith( "!" ) ) {
             s = s.substring( 1 );
-            return executeFunction( "neg", parseExpression( s ) );
+            return executeFunction( "neg", evalExpression( s ) );
         }
         throw new ScriptException( "Invalid statement or undefined variable " + s );
     }

@@ -16,7 +16,7 @@ public class Main {
 
     public static void main( String[] args ) {
         try {
-            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "la5.ms" ) ) ) ).parse();
+            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "testScript.ms" ) ) ) ).parse();
         } catch ( FileNotFoundException e ) {
             e.printStackTrace();
         } catch ( ScriptException e ) {
