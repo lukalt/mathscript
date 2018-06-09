@@ -22,11 +22,23 @@ public class FunctionManager {
         this.functionMap.put( "read", new ReadFunctions.ReadFunction() );
         this.functionMap.put( "readln", new ReadFunctions.ReadLnFunction() );
 
+        // comparisons
+        this.functionMap.put( "==", new CompareInfixFunctions.EqualsFunction() );
+        this.functionMap.put( "!=", new CompareInfixFunctions.NotEqualsFunction() );
+        this.functionMap.put( "<=", new CompareInfixFunctions.LowerEqFunction() );
+        this.functionMap.put( "<", new CompareInfixFunctions.LowerFunction() );
+        this.functionMap.put( ">=", new CompareInfixFunctions.GreaterEqFunction() );
+        this.functionMap.put( ">", new CompareInfixFunctions.GreaterFunction() );
+
+        // booleans
+        this.functionMap.put( "neg", new BoolFunctions.NegFunction() );
+
         // simple math
         this.functionMap.put( "+", new BasicInfixFunction.AddFunction() );
         this.functionMap.put( "-", new BasicInfixFunction.SubFunction() );
         this.functionMap.put( "*", new BasicInfixFunction.MulFunction() );
         this.functionMap.put( "/", new BasicInfixFunction.DivFunction() );
+        this.functionMap.put( "%", new BasicInfixFunction.ModFunction() );
         this.functionMap.put( "pow", new BasicMathFunction.PowFunction() );
         this.functionMap.put( "^", new BasicMathFunction.PowFunction() );
         this.functionMap.put( "sqrt", new BasicMathFunction.SqrtFunction() );

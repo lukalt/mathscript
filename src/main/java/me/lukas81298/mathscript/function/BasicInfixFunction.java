@@ -105,6 +105,26 @@ public class BasicInfixFunction {
         }
     }
 
+    public final static class ModFunction implements Function {
+
+        @Override
+        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+            Number left = Types.ensureType( arguments[0], Number.class, false );
+            Number right = Types.ensureType( arguments[1], Number.class, false );
+            return Types.modNumbers( left, right );
+        }
+
+        @Override
+        public Class<?> mapsTo() {
+            return Number.class;
+        }
+
+        @Override
+        public boolean acceptsArgumentLength( int i ) {
+            return i == 2;
+        }
+    }
+
     public final static class TransposeFunction implements Function {
 
         @Override

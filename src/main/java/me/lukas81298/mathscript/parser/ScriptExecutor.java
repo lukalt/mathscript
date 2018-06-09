@@ -20,7 +20,7 @@ public class ScriptExecutor {
 
     private final Scanner scanner;
     private final Pattern letPattern = Pattern.compile( "(let|var|define) ([A-Za-z_][A-Za-z0-1_]{0,127}) *= *(.+)" );
-
+    private final Pattern ifPattern = Pattern.compile( "if ?(.*)" );
 
     private final Map<Pattern, ScriptFunction<Matcher, Object>> patterns = new LinkedHashMap<>();
 
@@ -65,7 +65,7 @@ public class ScriptExecutor {
             public Object apply( Matcher matcher ) throws ScriptException {
                 String elements = matcher.group( 1 );
                 final String[] split = elements.split( "," );
-                Tuple tuple = new Tuple(split.length);
+                Tuple tuple = new Tuple( split.length );
                 for ( int i = 0; i < split.length; i++ ) {
                     tuple.set( i, parseExpression( split[i] ) );
                 }
@@ -85,7 +85,7 @@ public class ScriptExecutor {
             }
         } );
 
-        this.registerPattern( "(.+)[ ]*((\\+|-|\\*|\\.|%|\\^|\\/)[ ]*(.+))+", new ScriptFunction<Matcher, Object>() {
+        this.registerPattern( "(.+)[ ]*((\\+|-|\\*|\\.|%|\\^|\\/|<=|<|>=|>|==|!=)[ ]*(.+))+", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher infixMatcher ) throws ScriptException {
                 String left = infixMatcher.group( 1 );
@@ -102,6 +102,10 @@ public class ScriptExecutor {
     }
 
     public void parse() throws ScriptException {
+        this.parse( State.NORMAL );
+    }
+
+    private void parse( State state ) throws ScriptException {
         if ( !scanner.hasNextLine() ) {
             return;
         }
@@ -111,17 +115,43 @@ public class ScriptExecutor {
             line = line.substring( 0, firstComment ).trim();
         }
         if ( !line.isEmpty() ) {
-            Matcher matcher = letPattern.matcher( line );
-            if ( matcher.find() ) {
-                String varName = matcher.group( 2 );
-                Object value = parseExpression( matcher.group( 3 ) );
-                scopedDefinedVariables.put( varName, value );
+            if ( line.equalsIgnoreCase( "endif" ) || line.equalsIgnoreCase( "fi" ) ) {
+                state = State.NORMAL;
+            } else if ( state == State.IF && line.equalsIgnoreCase( "else" ) ) {
+                String l = scanner.nextLine().trim();
+                while ( !( l.equalsIgnoreCase( "endif" ) || l.equalsIgnoreCase( "fi" ) ) ) {
+                    l = scanner.nextLine().trim();
+                }
             } else {
-                parseExpression( line );
+                Matcher matcher = letPattern.matcher( line );
+                if ( matcher.find() ) {
+                    String varName = matcher.group( 2 );
+                    Object value = parseExpression( matcher.group( 3 ) );
+                    scopedDefinedVariables.put( varName, value );
+                } else {
+                    Matcher ifMatched = ifPattern.matcher( line );
+                    if ( ifMatched.matches() ) {
+                        if ( Objects.equals( true, parseExpression( ifMatched.group( 1 ) ) ) ) {
+                            state = State.IF;
+                        } else {
+                            String nextLine = scanner.nextLine().trim();
+                            while ( !nextLine.equalsIgnoreCase( "else" ) && !nextLine.equalsIgnoreCase( "endif" ) && !nextLine.equalsIgnoreCase( "fi" ) ) {
+                                nextLine = scanner.nextLine().trim();
+                            }
+                            if ( nextLine.equalsIgnoreCase( "else" ) ) {
+                                state = State.ELSE;
+                            } else {
+                                state = State.NORMAL;
+                            }
+                        }
+                    } else {
+                        parseExpression( line );
+                    }
+                }
             }
         }
 
-        this.parse();
+        this.parse( state );
     }
 
     public Map<String, Object> getVariables() {
@@ -164,9 +194,13 @@ public class ScriptExecutor {
             return scopedDefinedVariables.get( s );
         }
 
-        if( s.endsWith( "!" ) ) {
+        if ( s.endsWith( "!" ) ) {
             s = s.substring( 0, s.length() - 1 );
             return executeFunction( "fac", parseExpression( s ) );
+        }
+        if(s.startsWith( "!" )) {
+            s = s.substring( 1 );
+            return executeFunction( "neg", parseExpression( s ) );
         }
 
         throw new ScriptException( "Invalid statement or undefined variable " + s );

@@ -253,6 +253,63 @@ public class Types {
 
         return a.doubleValue() / b.doubleValue();
     }
+    
+    public static Number modNumbers( Number a, Number b ) {
+
+        if ( a instanceof Long && b instanceof Long ) {
+            return a.longValue() % b.longValue();
+        }
+        if ( a instanceof Long && b instanceof Integer ) {
+            return a.longValue() % b.intValue();
+        }
+        if( a instanceof Long && b instanceof Double ) {
+            return a.longValue() % b.doubleValue();
+        }
+        if( a instanceof Long && b instanceof Float ) {
+            return a.longValue() % b.floatValue();
+        }
+
+        if ( a instanceof Integer && b instanceof Integer ) {
+            return a.intValue() % b.intValue();
+        }
+        if( a instanceof Integer && b instanceof Long ) {
+            return a.intValue() % b.longValue();
+        }
+        if( a instanceof Integer && b instanceof Double ) {
+            return a.intValue() % b.doubleValue();
+        }
+        if( a instanceof Integer && b instanceof Float ) {
+            return a.intValue() % b.floatValue();
+        }
+
+        if ( a instanceof Double && b instanceof Double ) {
+            return a.doubleValue() % b.doubleValue();
+        }
+        if( a instanceof Double && b instanceof Float ) {
+            return a.doubleValue() % b.floatValue();
+        }
+        if( a instanceof Double && b instanceof Integer )  {
+            return a.doubleValue() % b.intValue();
+        }
+        if( a instanceof Double && b instanceof Long ) {
+            return a.doubleValue() % b.longValue();
+        }
+
+        if ( a instanceof Float && b instanceof Float ) {
+            return a.floatValue() % b.floatValue();
+        }
+        if( a instanceof Float && b instanceof Double ) {
+            return a.floatValue() % b.doubleValue();
+        }
+        if( a instanceof Float && b instanceof Long ) {
+            return a.floatValue() % b.longValue();
+        }
+        if( a instanceof Float && b instanceof Integer ) {
+            return a.floatValue() % b.intValue();
+        }
+
+        return a.doubleValue() % b.doubleValue();
+    }
 
     public static Number checkIfNumber( String s ) {
         s = s.trim();
