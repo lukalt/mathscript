@@ -21,10 +21,14 @@ import java.util.regex.Pattern;
  */
 public class ScriptExecutor {
 
+    private final static String VAR_PATTERN = "[A-Za-z_][A-Za-z0-1_]{0,127}";
     private final ScriptScanner scanner;
-    private final Pattern letPattern = Pattern.compile( "(let|var|define) ([A-Za-z_][A-Za-z0-1_]{0,127}) *= *(.+)" );
-
-    private final Pattern functionPattern = Pattern.compile( "function ([a-zA-Z_][a-zA-Z0-9_]*)\\((.*)\\)" );
+    private final Pattern letPattern = Pattern.compile( "(let|var|define) (" + VAR_PATTERN + ") *= *(.+)" );
+    private final Pattern suffixFunctionPattern = Pattern.compile( "(" + VAR_PATTERN + ") *([+\\-*/])= *(.*)" );
+    private final Pattern incrementFunctionPattern = Pattern.compile( "(" + VAR_PATTERN + ") *([+\\-]{2})" );
+    private final Pattern forEachPattern = Pattern.compile( "foreach ([A-Za-z_][A-Za-z0-1_]{0,127}) in (.*)", Pattern.MULTILINE );
+    private final Pattern forPattern = Pattern.compile( "for +([A-Za-z_][A-Za-z0-1_]{0,127}) +(step (.*) +)?from +(.*) +to +(.*)" );
+    private final Pattern functionPattern = Pattern.compile( "function (" + VAR_PATTERN + ")\\((.*)\\)" );
 
     private final Map<Pattern, ScriptFunction<Matcher, Object>> patterns = new LinkedHashMap<>();
 
@@ -38,7 +42,7 @@ public class ScriptExecutor {
 
     public ScriptExecutor( ScriptScanner scanner, Map<String, Object> variables, Map<String, Function> functions ) {
         this.scanner = scanner;
-        if( functions == null ) {
+        if ( functions == null ) {
             this.functionManager = new FunctionManager();
         } else {
             this.functionManager = new FunctionManager( functions );
@@ -46,9 +50,21 @@ public class ScriptExecutor {
         if ( variables != null ) {
             this.scopedDefinedVariables.putAll( variables );
         }
+        this.registerPattern( "\\[([0-9]+)\\.\\.([0-9]+)\\]", new ScriptFunction<Matcher, Object>() {
+            @Override
+            public Object apply( Matcher matcher ) throws ScriptException {
+                List<Integer> list = new InternalArrayList<>();
+                int i = Integer.parseInt( matcher.group( 1 ) ), j = Integer.parseInt( matcher.group( 2 ) );
+                for ( ; i <= j; i++ ) {
+                    list.add( i );
+                }
+                return list;
+            }
+        } );
         this.registerPattern( "\\[(.*)\\]", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher matcher ) throws ScriptException {
+
                 String elements = matcher.group( 1 );
                 final String[] split = elements.split( "," );
                 List<Object> list = new InternalArrayList<>();
@@ -131,23 +147,59 @@ public class ScriptExecutor {
 
     private void parseWhileBlock( String condition ) throws ScriptException, ReturnValueException {
         int index = this.scanner.index(); // store the pc of the while statement
-        outer:
         while ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) {
-            while ( this.scanner.hasNextLine() ) {
-                String line = stripComment( this.scanner.nextLine().trim() );
-                if ( line.toLowerCase().equals( "done" ) ) {
-                    this.scanner.jump( index );
-                    continue outer;
-                }
-                parseLine( line );
-            }
-            throw new ScriptException( "Unexpected end of file, missing done statement" );
+            executeInnerBodyTillDone( index );
         }
-        while ( scanner.hasNextLine() ) {
-            if ( !scanner.nextLine().toLowerCase().equals( "done" ) ) {
-                continue;
+        this.skipToDone(); // skip everything till we see the next done statement
+    }
+
+    private void parseForEachBlock( String variable, Iterable iterable ) throws ScriptException, ReturnValueException {
+        Object oldVal = this.scopedDefinedVariables.get( variable );
+        int index = this.scanner.index(); // store the pc of the while statement
+        Iterator it = iterable.iterator();
+        while ( it.hasNext() ) {
+            this.scopedDefinedVariables.put( variable, it.next() );
+            this.executeInnerBodyTillDone( index );
+        }
+        this.skipToDone();
+        this.scopedDefinedVariables.put( variable, oldVal ); // restore old state
+    }
+
+    private void parseForBlock( String variable, int step, int from, int to ) throws ScriptException, ReturnValueException {
+        Object oldVal = this.scopedDefinedVariables.get( variable );
+        int index = this.scanner.index(); // store the pc of the while statement
+        for ( int i = from; i <= to; i += step ) {
+            this.scopedDefinedVariables.put( variable, i );
+            this.executeInnerBodyTillDone( index );
+        }
+        this.skipToDone();
+        this.scopedDefinedVariables.put( variable, oldVal ); // restore old state
+    }
+
+    private void executeInnerBodyTillDone( int index ) throws ScriptException, ReturnValueException {
+        while ( this.scanner.hasNextLine() ) {
+            String line = stripComment( this.scanner.nextLine().trim() );
+            if ( line.toLowerCase().equals( "done" ) ) {
+                this.scanner.jump( index );
+                return;
             }
-            break;
+            parseLine( line );
+        }
+        throw new ScriptException( "Unexpected end of file, missing done statement" );
+    }
+
+    private void skipToDone() {
+        int missingDoneStatements = 1;
+        while ( scanner.hasNextLine() ) {
+            String lowerCase = scanner.nextLine().toLowerCase().trim();
+            if ( lowerCase.startsWith( "while " ) || lowerCase.startsWith( "foreach " ) || lowerCase.startsWith( "for " ) ) {
+                missingDoneStatements++;
+            } else if ( lowerCase.equals( "done" ) ) {
+                missingDoneStatements--;
+            }
+            if ( missingDoneStatements <= 0 ) {
+                break;
+            }
         }
     }
 
@@ -196,8 +248,8 @@ public class ScriptExecutor {
         return line;
     }
 
-    public void parseLine( String line ) throws ScriptException, ReturnValueException {
-      //  System.out.println( "Parse line " + line );
+    private void parseLine( String line ) throws ScriptException, ReturnValueException {
+        //  System.out.println( "Parse line " + line );
         if ( line.equals( "/*" ) ) {
             do {
                 if ( !scanner.hasNextLine() ) {
@@ -223,22 +275,37 @@ public class ScriptExecutor {
                     parseIfBlock( line.substring( "if ".length() ) );
                 } else if ( lowerLine.startsWith( "while " ) ) {
                     parseWhileBlock( line.substring( "while ".length() ) );
-                } else if( lowerLine.equals( "return" ) ) {
+                } else if ( lowerLine.equals( "return" ) ) {
                     throw new ReturnValueException( null );
-                } else if( lowerLine.startsWith( "return " ) ) {
+                } else if ( lowerLine.startsWith( "return " ) ) {
                     throw new ReturnValueException( evalExpression( line.substring( "return ".length() ) ) );
-                } else {
-                    Matcher matcher1 = functionPattern.matcher( line.trim() );
-                    if ( matcher1.matches() ) {
-                        parseFunction( matcher1.group( 1 ), matcher1.group( 2 ) );
+                } else if ( ( matcher = functionPattern.matcher( line ) ).matches() ) {
+                    parseFunction( matcher.group( 1 ), matcher.group( 2 ) );
+                } else if ( ( matcher = suffixFunctionPattern.matcher( line ) ).matches() ) {
+                    Object oldValue = this.scopedDefinedVariables.get( matcher.group( 1 ) );
+                    this.scopedDefinedVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ), oldValue, evalExpression( matcher.group( 3 ) ) ) );
+                } else if ( ( matcher = incrementFunctionPattern.matcher( line ) ).matches() ) {
+                    Object oldValue = this.scopedDefinedVariables.get( matcher.group( 1 ) );
+                    this.scopedDefinedVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ).substring( 0, 1 ), oldValue, 1 ) );
+                } else if ( ( matcher = this.forEachPattern.matcher( line ) ).matches() ) {
+                    parseForEachBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 2 ) ), Iterable.class, false ) );
+                } else if ( ( matcher = this.forPattern.matcher( line ) ).matches() ) {
+                    if ( matcher.group( 2 ) != null ) { // with step
+                        parseForBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 3 ) ), Number.class, false ).intValue(),
+                                Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
+                                Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
                     } else {
-                        evalExpression( line );
+                        parseForBlock( matcher.group( 1 ), 1,
+                                Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
+                                Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
                     }
+                } else {
+                    evalExpression( line );
                 }
             }
+
         }
     }
-
 
     private String[] parseArgumentNames( String raw ) throws ScriptException {
         String[] split = raw.split( "," );
@@ -265,7 +332,7 @@ public class ScriptExecutor {
         while ( this.scanner.hasNextLine() ) {
             String line = this.scanner.nextLine();
             if ( line.trim().toLowerCase().equals( "end function" ) ) {
-                this.functionManager.register( new UserDefinedFunction( functionName, scanned.toArray( new String[0] ), argumentNames,  functionManager.getFunctions() ), functionName );
+                this.functionManager.register( new UserDefinedFunction( functionName, scanned.toArray( new String[0] ), argumentNames, functionManager.getFunctions() ), functionName );
                 return;
             } else {
                 scanned.add( line );

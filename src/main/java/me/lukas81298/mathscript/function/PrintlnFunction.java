@@ -10,6 +10,10 @@ public class PrintlnFunction implements Function {
 
     @Override
     public Object execute( ScriptExecutor env, Object... arguments ) {
+        if(arguments.length == 0) {
+            System.out.println();
+            return null;
+        }
         for ( Object argument : arguments ) {
             System.out.println( argument );
         }
