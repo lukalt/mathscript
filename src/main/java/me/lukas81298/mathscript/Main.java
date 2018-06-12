@@ -16,7 +16,7 @@ public class Main {
 
     public static void main( String[] args ) {
         try {
-            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "functionTest.ms" ) ) ) ).execute();
+            new ScriptExecutor( new ScriptScannerStream( new FileInputStream( new File( "dotBeforeDash.ms" ) ) ) ).execute();
         } catch ( FileNotFoundException e ) {
             e.printStackTrace();
         } catch ( ScriptException e ) {

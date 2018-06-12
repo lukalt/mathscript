@@ -52,7 +52,7 @@ public class ScriptExecutor {
         }
         this.registerPattern( "\\[([0-9]+)\\.\\.([0-9]+)\\]", new ScriptFunction<Matcher, Object>() {
             @Override
-            public Object apply( Matcher matcher ) throws ScriptException {
+            public Object apply( Matcher matcher ) {
                 List<Integer> list = new InternalArrayList<>();
                 int i = Integer.parseInt( matcher.group( 1 ) ), j = Integer.parseInt( matcher.group( 2 ) );
                 for ( ; i <= j; i++ ) {
@@ -116,15 +116,29 @@ public class ScriptExecutor {
             }
         } );
 
-        this.registerPattern( "(.+)[ ]*((\\+|-|\\*|\\.|%|\\^|\\/|<=|<|>=|>|==|!=)[ ]*(.+))+", new ScriptFunction<Matcher, Object>() {
+
+        this.registerPattern( "(.+) *(\\+|-|\\^|<=|<|>=|>|==|!=) *(.+)", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher infixMatcher ) throws ScriptException {
                 String left = infixMatcher.group( 1 );
-                String op = infixMatcher.group( 3 );
-                String right = infixMatcher.group( 4 );
+                String op = infixMatcher.group( 2 );
+                String right = infixMatcher.group( 3 );
+                // System.out.println( "2nd: " + left + " |" + op + "| " + right );
                 return executeFunction( op, evalExpression( left ), evalExpression( right ) );
             }
         } );
+
+        this.registerPattern( "(.+) *(\\*|%|\\/) *(.*)", new ScriptFunction<Matcher, Object>() {
+            @Override
+            public Object apply( Matcher infixMatcher ) throws ScriptException {
+                String left = infixMatcher.group( 1 );
+                String op = infixMatcher.group( 2 );
+                String right = infixMatcher.group( 3 );
+                // System.out.println( "1st: " + left + " |" + op + "| " + right );
+                return executeFunction( op, evalExpression( left ), evalExpression( right ) );
+            }
+        } );
+
 
     }
 
