@@ -11,6 +11,7 @@ import me.lukas81298.mathscript.interpreter.ops.RegexLineOperation;
 import me.lukas81298.mathscript.struct.InternalArrayList;
 import me.lukas81298.mathscript.struct.InternalHashSet;
 import me.lukas81298.mathscript.struct.InternalTuple;
+import me.lukas81298.mathscript.struct.matrix.Matrix;
 import me.lukas81298.mathscript.util.MapBuilder;
 import me.lukas81298.mathscript.util.ScriptFunction;
 import me.lukas81298.mathscript.util.ScriptScanner;
@@ -127,6 +128,27 @@ public class BaseInterpreter {
             }
         } );
 
+        this.registerPattern( "(.*)\\[(.*)\\]", new ScriptFunction<Matcher, Object>() {
+            @Override
+            public Object apply( Matcher matcher ) throws ScriptException {
+                Object object = Types.ensureNotNull( evalExpression( matcher.group( 1 ) ) );
+                Number number = Types.ensureType( evalExpression( matcher.group( 2 ) ), Number.class, false );
+                if ( object instanceof List ) {
+                    return ( (List) object ).get( number.intValue() );
+                }
+                if ( object instanceof InternalTuple ) {
+                    return ( (InternalTuple) object ).get( number.intValue() );
+                }
+                if ( object instanceof Matrix ) {
+                    List list = new InternalArrayList();
+                    for ( Object o : ( (Matrix) object ).getRow( number.intValue() ) ) {
+                        list.add( o );
+                    }
+                    return list;
+                }
+                throw new ScriptException( "Cannot get field " + number + " from " + object.getClass().getSimpleName() );
+            }
+        } );
         this.registerPattern( "(.+) *(\\+|-|\\^|<=|<|>=|>|==|!=) *(.+)", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher infixMatcher ) throws ScriptException {
@@ -247,7 +269,7 @@ public class BaseInterpreter {
         if ( !line.isEmpty() ) {
             for ( LineOperation op : this.lineOperations ) {
                 Object z = op.test( line );
-                if( z != null ) {
+                if ( z != null ) {
                     //noinspection unchecked
                     op.execute( this, z, line );
                     return;

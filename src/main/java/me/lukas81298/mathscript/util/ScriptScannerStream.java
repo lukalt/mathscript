@@ -16,6 +16,7 @@ public class ScriptScannerStream implements ScriptScanner {
     private final Scanner delegate;
     private final List<String> buffer = new ArrayList<>(); // use an array list here for random access
     private int index = 0;
+
     public ScriptScannerStream( InputStream in ) {
         this.delegate = new Scanner( in );
     }

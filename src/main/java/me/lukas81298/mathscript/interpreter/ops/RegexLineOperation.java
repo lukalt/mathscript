@@ -27,8 +27,6 @@ public class RegexLineOperation implements LineOperation<Matcher> {
         this.function = function;
     }
 
-
-
     @Override
     public Matcher test( String input ) {
         Matcher matcher = this.pattern.matcher( input );
