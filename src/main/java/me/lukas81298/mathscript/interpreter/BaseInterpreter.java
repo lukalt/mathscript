@@ -4,6 +4,10 @@ import me.lukas81298.mathscript.Types;
 import me.lukas81298.mathscript.function.Function;
 import me.lukas81298.mathscript.function.FunctionManager;
 import me.lukas81298.mathscript.interpreter.blocks.*;
+import me.lukas81298.mathscript.interpreter.ops.EqualsLineOperation;
+import me.lukas81298.mathscript.interpreter.ops.LineOperation;
+import me.lukas81298.mathscript.interpreter.ops.PrefixLineOperation;
+import me.lukas81298.mathscript.interpreter.ops.RegexLineOperation;
 import me.lukas81298.mathscript.struct.InternalArrayList;
 import me.lukas81298.mathscript.struct.InternalHashSet;
 import me.lukas81298.mathscript.struct.InternalTuple;
@@ -23,21 +27,17 @@ public class BaseInterpreter {
 
     private final static String VAR_PATTERN = "[A-Za-z_][A-Za-z0-1_]{0,127}";
     private final ScriptScanner scanner;
-    private final Pattern letPattern = Pattern.compile( "(let|var|define) (" + VAR_PATTERN + ") *= *(.+)" );
-    private final Pattern suffixFunctionPattern = Pattern.compile( "(" + VAR_PATTERN + ") *([+\\-*/])= *(.*)" );
-    private final Pattern incrementFunctionPattern = Pattern.compile( "(" + VAR_PATTERN + ") *([+\\-]{2})" );
-    private final Pattern forEachPattern = Pattern.compile( "foreach ([A-Za-z_][A-Za-z0-1_]{0,127}) in (.*)", Pattern.MULTILINE );
-    private final Pattern forPattern = Pattern.compile( "for +([A-Za-z_][A-Za-z0-1_]{0,127}) +(step (.*) +)?from +(.*) +to +(.*)" );
-    private final Pattern functionPattern = Pattern.compile( "function (" + VAR_PATTERN + ")\\((.*)\\)" );
 
     private final Map<Pattern, ScriptFunction<Matcher, Object>> patterns = new LinkedHashMap<>();
+    private final List<LineOperation> lineOperations = new LinkedList<>();
+
     private final Map<String, Object> directAssociatedValues = MapBuilder.<String, Object>create( "true", Boolean.TRUE )
             .map( "false", Boolean.FALSE ).map( "null", null ).build();
     private final Map<Class<? extends AbstractBlock>, AbstractBlock> blocks = new HashMap<>();
 
     private final FunctionManager functionManager;
 
-    private final Map<String, Object> scopedDefinedVariables = new HashMap<>();
+    private final Map<String, Object> visibileVariables = new HashMap<>();
 
     public BaseInterpreter( ScriptScanner scriptScanner ) {
         this( scriptScanner, null, null );
@@ -58,7 +58,7 @@ public class BaseInterpreter {
         this.blocks.put( IfOptElseBlock.class, new IfOptElseBlock( scanner, this ) );
 
         if ( variables != null ) {
-            this.scopedDefinedVariables.putAll( variables );
+            this.visibileVariables.putAll( variables );
         }
 
         this.registerPattern( "\\[([0-9]+)\\.\\.([0-9]+)\\]", new ScriptFunction<Matcher, Object>() {
@@ -127,7 +127,6 @@ public class BaseInterpreter {
             }
         } );
 
-
         this.registerPattern( "(.+) *(\\+|-|\\^|<=|<|>=|>|==|!=) *(.+)", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher infixMatcher ) throws ScriptException {
@@ -149,14 +148,65 @@ public class BaseInterpreter {
                 return executeFunction( op, evalExpression( left ), evalExpression( right ) );
             }
         } );
+
+        this.registerLineOperation( new EqualsLineOperation( "return", ( k, l ) -> {
+            throw new ReturnValueException( null );
+        } ) );
+        this.registerLineOperation( new PrefixLineOperation( "if", ( k, l ) -> {
+            getBlock( IfOptElseBlock.class ).parseIfBlock( l );
+        } ) );
+        this.registerLineOperation( new PrefixLineOperation( "while", ( k, l ) -> {
+            getBlock( WhileBlock.class ).parseWhileBlock( l );
+        } ) );
+        this.registerLineOperation( new PrefixLineOperation( "return", ( k, l ) -> {
+            throw new ReturnValueException( evalExpression( l ) );
+        } ) );
+        this.registerLineOperation( new RegexLineOperation( "function (" + VAR_PATTERN + ")\\((.*)\\)", ( k, matcher ) -> {
+            getBlock( FunctionBlock.class ).parseFunction( matcher.group( 1 ), matcher.group( 2 ) );
+        } ) );
+        this.registerLineOperation( new RegexLineOperation( "(" + VAR_PATTERN + ") *([+\\-*/])= *(.*)", ( k, matcher ) -> {
+            Object oldValue = this.visibileVariables.get( matcher.group( 1 ) );
+            this.visibileVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ), oldValue, evalExpression( matcher.group( 3 ) ) ) );
+        } ) );
+        this.registerLineOperation( new RegexLineOperation( "(" + VAR_PATTERN + ") *([+\\-]{2})", ( k, matcher ) -> {
+            Object oldValue = this.visibileVariables.get( matcher.group( 1 ) );
+            this.visibileVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ).substring( 0, 1 ), oldValue, 1 ) );
+        } ) );
+        this.registerLineOperation( new RegexLineOperation( "foreach ([A-Za-z_][A-Za-z0-1_]{0,127}) in (.*)", ( k, matcher ) -> {
+            getBlock( ForEachBlock.class ).parseForEachBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 2 ) ), Iterable.class, false ) );
+        }, Pattern.MULTILINE ) );
+        this.registerLineOperation( new RegexLineOperation( "for +([A-Za-z_][A-Za-z0-1_]{0,127}) +(step (.*) +)?from +(.*) +to +(.*)", ( k, matcher ) -> {
+            if ( matcher.group( 2 ) != null ) { // with step
+                getBlock( ForBlock.class ).parseForBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 3 ) ), Number.class, false ).intValue(),
+                        Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
+                        Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
+            } else {
+                getBlock( ForBlock.class ).parseForBlock( matcher.group( 1 ), 1,
+                        Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
+                        Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
+            }
+        } ) );
+        this.registerLineOperation( new RegexLineOperation( "(let|var|define) (" + VAR_PATTERN + ") *= *(.+)", ( k, matcher ) -> {
+            String varName = matcher.group( 2 );
+            Object value = evalExpression( matcher.group( 3 ) );
+            visibileVariables.put( varName, value );
+        } ) );
+    }
+
+    public void registerLineOperation( LineOperation op ) {
+        this.lineOperations.add( op );
     }
 
     public <K extends AbstractBlock> K getBlock( Class<K> clazz ) throws ScriptException {
-        final K k = (K) this.blocks.get( clazz );
+        final K k = clazz.cast( this.blocks.get( clazz ) );
         if ( k == null ) {
             throw new ScriptException( "No block interpreter present for class " + clazz.getSimpleName() );
         }
         return k;
+    }
+
+    public Map<String, Object> getVariables() {
+        return visibileVariables;
     }
 
     public FunctionManager getFunctionManager() {
@@ -169,9 +219,9 @@ public class BaseInterpreter {
 
     public Object execute() throws ScriptException {
         while ( this.scanner.hasNextLine() ) {
-            String line = scanner.nextLine();
+            String line = this.scanner.nextLine();
             try {
-                parseLine( line );
+                this.parseLine( line );
             } catch ( ReturnValueException e ) {
                 return e.getResult();
             }
@@ -181,7 +231,6 @@ public class BaseInterpreter {
 
 
     public void parseLine( String line ) throws ScriptException, ReturnValueException {
-        //  System.out.println( "Parse line " + line );
         if ( line.equals( "/*" ) ) {
             do {
                 if ( !scanner.hasNextLine() ) {
@@ -196,52 +245,16 @@ public class BaseInterpreter {
         }
         line = InterpreterUtils.stripComment( line ).trim();
         if ( !line.isEmpty() ) {
-            Matcher matcher = letPattern.matcher( line );
-            if ( matcher.find() ) {
-                String varName = matcher.group( 2 );
-                Object value = evalExpression( matcher.group( 3 ) );
-                scopedDefinedVariables.put( varName, value );
-            } else {
-                String lowerLine = line.toLowerCase();
-                if ( lowerLine.startsWith( "if " ) ) {
-                    getBlock( IfOptElseBlock.class ).parseIfBlock( line.substring( "if ".length() ) );
-                } else if ( lowerLine.startsWith( "while " ) ) {
-                    getBlock( WhileBlock.class ).parseWhileBlock( line.substring( "while ".length() ) );
-                } else if ( lowerLine.equals( "return" ) ) {
-                    throw new ReturnValueException( null );
-                } else if ( lowerLine.startsWith( "return " ) ) {
-                    throw new ReturnValueException( evalExpression( line.substring( "return ".length() ) ) );
-                } else if ( ( matcher = functionPattern.matcher( line ) ).matches() ) {
-                    getBlock( FunctionBlock.class ).parseFunction( matcher.group( 1 ), matcher.group( 2 ) );
-                } else if ( ( matcher = suffixFunctionPattern.matcher( line ) ).matches() ) {
-                    Object oldValue = this.scopedDefinedVariables.get( matcher.group( 1 ) );
-                    this.scopedDefinedVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ), oldValue, evalExpression( matcher.group( 3 ) ) ) );
-                } else if ( ( matcher = incrementFunctionPattern.matcher( line ) ).matches() ) {
-                    Object oldValue = this.scopedDefinedVariables.get( matcher.group( 1 ) );
-                    this.scopedDefinedVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ).substring( 0, 1 ), oldValue, 1 ) );
-                } else if ( ( matcher = this.forEachPattern.matcher( line ) ).matches() ) {
-                    getBlock( ForEachBlock.class ).parseForEachBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 2 ) ), Iterable.class, false ) );
-                } else if ( ( matcher = this.forPattern.matcher( line ) ).matches() ) {
-                    if ( matcher.group( 2 ) != null ) { // with step
-                        getBlock( ForBlock.class ).parseForBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 3 ) ), Number.class, false ).intValue(),
-                                Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
-                                Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
-                    } else {
-                        getBlock( ForBlock.class ).parseForBlock( matcher.group( 1 ), 1,
-                                Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
-                                Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
-                    }
-                } else {
-                    evalExpression( line );
+            for ( LineOperation op : this.lineOperations ) {
+                Object z = op.test( line );
+                if( z != null ) {
+                    //noinspection unchecked
+                    op.execute( this, z, line );
+                    return;
                 }
             }
-
+            evalExpression( line );
         }
-    }
-
-
-    public Map<String, Object> getVariables() {
-        return this.scopedDefinedVariables;
     }
 
     private Object executeFunction( String name, Object... args ) throws ScriptException {
@@ -276,8 +289,8 @@ public class BaseInterpreter {
             return s.length() == 2 ? "" : s.substring( 1, s.length() - 1 );
         }
 
-        if ( scopedDefinedVariables.containsKey( s ) ) {
-            return scopedDefinedVariables.get( s );
+        if ( visibileVariables.containsKey( s ) ) {
+            return visibileVariables.get( s );
         }
 
         if ( s.endsWith( "!" ) ) {
