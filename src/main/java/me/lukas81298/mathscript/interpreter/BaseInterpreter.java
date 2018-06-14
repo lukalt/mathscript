@@ -171,6 +171,11 @@ public class BaseInterpreter {
             }
         } );
 
+        this.registerLineOperation( new RegexLineOperation( "((let|var|define) )?(" + VAR_PATTERN + ") *= *(.+)", ( k, matcher ) -> {
+            String varName = matcher.group( 3 );
+            Object value = evalExpression( matcher.group( 4 ) );
+            visibileVariables.put( varName, value );
+        } ) );
         this.registerLineOperation( new EqualsLineOperation( "return", ( k, l ) -> {
             throw new ReturnValueException( null );
         } ) );
@@ -194,7 +199,7 @@ public class BaseInterpreter {
             Object oldValue = this.visibileVariables.get( matcher.group( 1 ) );
             this.visibileVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ).substring( 0, 1 ), oldValue, 1 ) );
         } ) );
-        this.registerLineOperation( new RegexLineOperation( "foreach ([A-Za-z_][A-Za-z0-1_]{0,127}) in (.*)", ( k, matcher ) -> {
+        this.registerLineOperation( new RegexLineOperation( "foreach () in (.*)", ( k, matcher ) -> {
             getBlock( ForEachBlock.class ).parseForEachBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 2 ) ), Iterable.class, false ) );
         }, Pattern.MULTILINE ) );
         this.registerLineOperation( new RegexLineOperation( "for +([A-Za-z_][A-Za-z0-1_]{0,127}) +(step (.*) +)?from +(.*) +to +(.*)", ( k, matcher ) -> {
@@ -208,11 +213,7 @@ public class BaseInterpreter {
                         Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
             }
         } ) );
-        this.registerLineOperation( new RegexLineOperation( "(let|var|define) (" + VAR_PATTERN + ") *= *(.+)", ( k, matcher ) -> {
-            String varName = matcher.group( 2 );
-            Object value = evalExpression( matcher.group( 3 ) );
-            visibileVariables.put( varName, value );
-        } ) );
+
     }
 
     public void registerLineOperation( LineOperation op ) {
