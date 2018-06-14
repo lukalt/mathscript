@@ -77,7 +77,7 @@ public class BaseInterpreter {
             public Object apply( Matcher matcher ) throws ScriptException {
 
                 String elements = matcher.group( 1 );
-                final String[] split = elements.split( "," );
+                final String[] split = InterpreterUtils.splitRealArguments( elements );
                 List<Object> list = new InternalArrayList<>();
                 for ( String s : split ) {
                     list.add( evalExpression( s ) );
@@ -89,7 +89,7 @@ public class BaseInterpreter {
             @Override
             public Object apply( Matcher functionMatcher ) throws ScriptException {
                 String functionName = functionMatcher.group( 1 );
-                String[] argsRaw = functionMatcher.group( 2 ).split( "," );
+                String[] argsRaw = InterpreterUtils.splitRealArguments( functionMatcher.group( 2 ) );
                 Object[] argsTypes;
                 if ( argsRaw[0].trim().isEmpty() ) {
                     argsTypes = new Object[0];
@@ -106,7 +106,7 @@ public class BaseInterpreter {
             @Override
             public Object apply( Matcher matcher ) throws ScriptException {
                 String elements = matcher.group( 1 );
-                final String[] split = elements.split( "," );
+                final String[] split = InterpreterUtils.splitRealArguments( elements );
                 InternalTuple tuple = new InternalTuple( split.length );
                 for ( int i = 0; i < split.length; i++ ) {
                     tuple.set( i, evalExpression( split[i] ) );
@@ -118,7 +118,7 @@ public class BaseInterpreter {
             @Override
             public Object apply( Matcher matcher ) throws ScriptException {
                 String elements = matcher.group( 1 );
-                final String[] split = elements.split( "," );
+                final String[] split = InterpreterUtils.splitRealArguments( elements );
                 Set<Object> set = new InternalHashSet<>();
                 for ( String s : split ) {
                     set.add( evalExpression( s ) );

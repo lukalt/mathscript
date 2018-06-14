@@ -32,9 +32,9 @@ let i = 0
 while i < 10
   println(i)
   let d = 0
-  //while d < 5
-  //  println("  " + d)
-  //  let d = d + 1
-  //done
+  while d < 5
+    println("  " + d)
+    let d = d + 1
+  done
   let i = i + 1
 done
