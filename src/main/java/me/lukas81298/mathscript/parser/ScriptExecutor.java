@@ -6,7 +6,7 @@ import me.lukas81298.mathscript.function.FunctionManager;
 import me.lukas81298.mathscript.function.udf.UserDefinedFunction;
 import me.lukas81298.mathscript.struct.InternalArrayList;
 import me.lukas81298.mathscript.struct.InternalHashSet;
-import me.lukas81298.mathscript.struct.Tuple;
+import me.lukas81298.mathscript.struct.InternalTuple;
 import me.lukas81298.mathscript.util.ScriptFunction;
 import me.lukas81298.mathscript.util.ScriptScanner;
 import me.lukas81298.mathscript.util.StringChecker;
@@ -80,7 +80,7 @@ public class ScriptExecutor {
             public Object apply( Matcher matcher ) throws ScriptException {
                 String elements = matcher.group( 1 );
                 final String[] split = elements.split( "," );
-                Tuple tuple = new Tuple( split.length );
+                InternalTuple tuple = new InternalTuple( split.length );
                 for ( int i = 0; i < split.length; i++ ) {
                     tuple.set( i, evalExpression( split[i] ) );
                 }
@@ -299,7 +299,28 @@ public class ScriptExecutor {
         }
 
         if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) {
-            return s.length() == 2 ? "" : s.substring( 1, s.length() - 1 );
+            if( s.length() == 1 ) { // something we cannot parse
+                throw new ScriptException( "Cannot parse a single \"" );
+            }
+            if( s.length() == 2 ) {
+                return ""; // empty string
+            }
+            char lastChar = ' ';
+            int i = 1;
+            char[] asArray = s.toCharArray();
+            boolean isValidString = true;
+            while ( i < s.length() - 1 ) {
+                char next = asArray[i];
+                if(next == '"' && lastChar != '\\') {
+                    isValidString = false;
+                    break;
+                }
+                lastChar = next;
+                i++;
+            }
+            if( isValidString ) {
+                return s.substring( 1, s.length() - 1 ).replace( "\\\"","\"" );
+            }
         }
 
         for ( Map.Entry<Pattern, ScriptFunction<Matcher, Object>> entry : this.patterns.entrySet() ) {
@@ -307,6 +328,10 @@ public class ScriptExecutor {
             if ( matcher.matches() ) {
                 return entry.getValue().apply( matcher );
             }
+        }
+
+        if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) {
+            return s.length() == 2 ? "" : s.substring( 1, s.length() - 1 );
         }
 
         if ( scopedDefinedVariables.containsKey( s ) ) {

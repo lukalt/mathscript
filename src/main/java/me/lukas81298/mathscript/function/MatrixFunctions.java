@@ -3,9 +3,9 @@ package me.lukas81298.mathscript.function;
 import me.lukas81298.mathscript.Types;
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
-import me.lukas81298.mathscript.structures.matrix.Matrix;
-import me.lukas81298.mathscript.structures.matrix.MatrixParser;
-import me.lukas81298.mathscript.structures.matrix.Ring;
+import me.lukas81298.mathscript.struct.matrix.Matrix;
+import me.lukas81298.mathscript.struct.matrix.MatrixParser;
+import me.lukas81298.mathscript.struct.algebraic.Ring;
 
 import java.util.List;
 

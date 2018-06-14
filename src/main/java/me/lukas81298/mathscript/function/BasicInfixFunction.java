@@ -4,7 +4,7 @@ import me.lukas81298.mathscript.Types;
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
 import me.lukas81298.mathscript.struct.InternalArrayList;
-import me.lukas81298.mathscript.structures.matrix.Matrix;
+import me.lukas81298.mathscript.struct.matrix.Matrix;
 import me.lukas81298.mathscript.util.NumberTypeOperations;
 
 import java.util.Collection;

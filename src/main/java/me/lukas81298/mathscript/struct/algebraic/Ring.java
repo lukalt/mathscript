@@ -1,4 +1,4 @@
-package me.lukas81298.mathscript.structures.matrix;
+package me.lukas81298.mathscript.struct.algebraic;
 
 /**
  * @author lukas

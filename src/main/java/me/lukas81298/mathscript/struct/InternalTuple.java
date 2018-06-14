@@ -8,11 +8,11 @@ import java.util.Objects;
  * @author lukas
  * @since 08.06.2018
  */
-public class Tuple implements Iterable {
+public class InternalTuple implements Iterable {
 
     private final Object[] data;
 
-    public Tuple( int length ) {
+    public InternalTuple( int length ) {
         this.data = new Object[length];
     }
 

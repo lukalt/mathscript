@@ -2,7 +2,7 @@ package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
-import me.lukas81298.mathscript.struct.Tuple;
+import me.lukas81298.mathscript.struct.InternalTuple;
 
 import java.util.List;
 
@@ -18,8 +18,8 @@ public class LengthFunction implements Function {
         if ( o instanceof List ) {
             return ( (List) o ).size();
         }
-        if( o instanceof Tuple ){
-            return ((Tuple)o).length();
+        if( o instanceof InternalTuple ){
+            return ((InternalTuple)o).length();
         }
         if( o instanceof String ) {
             return ((String) o).length();

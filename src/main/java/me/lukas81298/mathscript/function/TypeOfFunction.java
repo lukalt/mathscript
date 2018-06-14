@@ -2,8 +2,8 @@ package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.parser.ScriptException;
 import me.lukas81298.mathscript.parser.ScriptExecutor;
-import me.lukas81298.mathscript.struct.Tuple;
-import me.lukas81298.mathscript.structures.matrix.Matrix;
+import me.lukas81298.mathscript.struct.InternalTuple;
+import me.lukas81298.mathscript.struct.matrix.Matrix;
 
 import java.util.List;
 
@@ -22,8 +22,8 @@ public class TypeOfFunction implements Function {
         if( o instanceof List ) {
             return "(list)";
         }
-        if( o instanceof Tuple ) {
-            return "(" + ((Tuple)o).length() + "-tuple)";
+        if( o instanceof InternalTuple ) {
+            return "(" + ((InternalTuple)o).length() + "-tuple)";
         }
         if( o instanceof Matrix ) {
             Matrix m = (Matrix) o;

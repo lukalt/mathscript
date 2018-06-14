@@ -1,5 +1,6 @@
-package me.lukas81298.mathscript.structures.matrix;
+package me.lukas81298.mathscript.struct.matrix;
 
+import me.lukas81298.mathscript.struct.algebraic.Ring;
 import me.lukas81298.mathscript.util.IntTuple;
 
 import java.util.Arrays;
