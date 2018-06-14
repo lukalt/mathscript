@@ -1,7 +1,7 @@
 package me.lukas81298.mathscript.function;
 
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 /**
  * @author lukas
@@ -10,7 +10,7 @@ import me.lukas81298.mathscript.parser.ScriptExecutor;
 public class PrintFunction implements Function {
 
     @Override
-    public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+    public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
         System.out.print( arguments[0] );
         return arguments[0];
     }

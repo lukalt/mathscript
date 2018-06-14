@@ -1,6 +1,6 @@
 package me.lukas81298.mathscript.util;
 
-import me.lukas81298.mathscript.parser.ScriptException;
+import me.lukas81298.mathscript.interpreter.ScriptException;
 
 /**
  * @author lukas

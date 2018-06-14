@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 import java.util.Objects;
 
@@ -15,7 +15,7 @@ public class ParseFunctions {
     public final static class ParseFloatFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             String s = Types.ensureType(arguments[0], String.class, false);
             try {
                 return Float.parseFloat( s );
@@ -38,7 +38,7 @@ public class ParseFunctions {
     public final static class ParseDoubleFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             String s = Types.ensureType(arguments[0], String.class, false);
             try {
                 return Double.parseDouble( s );
@@ -61,7 +61,7 @@ public class ParseFunctions {
     public final static class ParseIntFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             String s = Types.ensureType(arguments[0], String.class, false);
             try {
                 return Integer.parseInt( s );
@@ -84,7 +84,7 @@ public class ParseFunctions {
     public final static class ParseLongFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             String s = Types.ensureType(arguments[0], String.class, false);
             try {
                 return Long.parseLong( s );
@@ -107,7 +107,7 @@ public class ParseFunctions {
     public final static class ToStringFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) {
+        public Object execute( BaseInterpreter env, Object... arguments ) {
             return Objects.toString(arguments[0]);
         }
 

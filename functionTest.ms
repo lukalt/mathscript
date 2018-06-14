@@ -1,2 +1,2 @@
-println("abc" + stringreverse("def"))
-println("abc\"" + stringreverse("yjs") + "\"def")
+let matrix = matrix([1,2,3],[4,5,6])
+println(matrix)

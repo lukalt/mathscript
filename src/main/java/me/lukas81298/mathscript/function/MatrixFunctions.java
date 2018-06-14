@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 import me.lukas81298.mathscript.struct.matrix.Matrix;
 import me.lukas81298.mathscript.struct.matrix.MatrixParser;
 import me.lukas81298.mathscript.struct.algebraic.Ring;
@@ -18,7 +18,7 @@ public class MatrixFunctions {
     public static final class MatrixParseFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return MatrixParser.parse( Types.ensureType( arguments[0], String.class, false ) );
         }
 
@@ -36,7 +36,7 @@ public class MatrixFunctions {
     public static final class MatrixAddFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return null;
         }
 
@@ -54,7 +54,7 @@ public class MatrixFunctions {
     public static final class MatrixSwapFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             Matrix m = Types.ensureType( arguments[0], Matrix.class, false );
             int i = Types.ensureType( arguments[1], Number.class, false ).intValue(), j = Types.ensureType( arguments[2], Number.class, false ).intValue();
             return m.swap( i, j );
@@ -74,7 +74,7 @@ public class MatrixFunctions {
     public static final class MatrixCreationFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             if ( arguments.length == 0 ) {
                 return new Matrix<>( 0, 0, null );
             }
@@ -113,7 +113,7 @@ public class MatrixFunctions {
     public final class MatrixIdFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             int size = Types.ensureType( arguments[0], Integer.class, false );
             if ( arguments.length == 3 ) {
                 Object zero = arguments[1];

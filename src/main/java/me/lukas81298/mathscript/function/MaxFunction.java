@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +16,7 @@ import java.util.List;
 public class MaxFunction implements Function {
 
     @Override
-    public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+    public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
         if ( arguments.length == 1 ) {
             Iterable collection = Types.ensureType( arguments[0], Iterable.class, false );
             List list = new ArrayList();

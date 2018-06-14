@@ -1,15 +1,15 @@
-package me.lukas81298.mathscript.parser;
+package me.lukas81298.mathscript.interpreter;
 
 import me.lukas81298.mathscript.Types;
 import me.lukas81298.mathscript.function.Function;
 import me.lukas81298.mathscript.function.FunctionManager;
-import me.lukas81298.mathscript.function.udf.UserDefinedFunction;
+import me.lukas81298.mathscript.interpreter.blocks.*;
 import me.lukas81298.mathscript.struct.InternalArrayList;
 import me.lukas81298.mathscript.struct.InternalHashSet;
 import me.lukas81298.mathscript.struct.InternalTuple;
+import me.lukas81298.mathscript.util.MapBuilder;
 import me.lukas81298.mathscript.util.ScriptFunction;
 import me.lukas81298.mathscript.util.ScriptScanner;
-import me.lukas81298.mathscript.util.StringChecker;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * @author lukas
  * @since 08.06.2018
  */
-public class ScriptExecutor {
+public class BaseInterpreter {
 
     private final static String VAR_PATTERN = "[A-Za-z_][A-Za-z0-1_]{0,127}";
     private final ScriptScanner scanner;
@@ -31,25 +31,36 @@ public class ScriptExecutor {
     private final Pattern functionPattern = Pattern.compile( "function (" + VAR_PATTERN + ")\\((.*)\\)" );
 
     private final Map<Pattern, ScriptFunction<Matcher, Object>> patterns = new LinkedHashMap<>();
+    private final Map<String, Object> directAssociatedValues = MapBuilder.<String, Object>create( "true", Boolean.TRUE )
+            .map( "false", Boolean.FALSE ).map( "null", null ).build();
+    private final Map<Class<? extends AbstractBlock>, AbstractBlock> blocks = new HashMap<>();
 
     private final FunctionManager functionManager;
 
     private final Map<String, Object> scopedDefinedVariables = new HashMap<>();
 
-    public ScriptExecutor( ScriptScanner scriptScanner ) {
+    public BaseInterpreter( ScriptScanner scriptScanner ) {
         this( scriptScanner, null, null );
     }
 
-    public ScriptExecutor( ScriptScanner scanner, Map<String, Object> variables, Map<String, Function> functions ) {
+    public BaseInterpreter( ScriptScanner scanner, Map<String, Object> variables, Map<String, Function> functions ) {
         this.scanner = scanner;
         if ( functions == null ) {
             this.functionManager = new FunctionManager();
         } else {
             this.functionManager = new FunctionManager( functions );
         }
+
+        this.blocks.put( FunctionBlock.class, new FunctionBlock( scanner, this ) );
+        this.blocks.put( ForBlock.class, new ForBlock( scanner, this ) );
+        this.blocks.put( ForEachBlock.class, new ForEachBlock( scanner, this ) );
+        this.blocks.put( WhileBlock.class, new WhileBlock( scanner, this ) );
+        this.blocks.put( IfOptElseBlock.class, new IfOptElseBlock( scanner, this ) );
+
         if ( variables != null ) {
             this.scopedDefinedVariables.putAll( variables );
         }
+
         this.registerPattern( "\\[([0-9]+)\\.\\.([0-9]+)\\]", new ScriptFunction<Matcher, Object>() {
             @Override
             public Object apply( Matcher matcher ) {
@@ -138,14 +149,23 @@ public class ScriptExecutor {
                 return executeFunction( op, evalExpression( left ), evalExpression( right ) );
             }
         } );
+    }
 
+    public <K extends AbstractBlock> K getBlock( Class<K> clazz ) throws ScriptException {
+        final K k = (K) this.blocks.get( clazz );
+        if ( k == null ) {
+            throw new ScriptException( "No block interpreter present for class " + clazz.getSimpleName() );
+        }
+        return k;
+    }
 
+    public FunctionManager getFunctionManager() {
+        return functionManager;
     }
 
     private void registerPattern( String pattern, ScriptFunction<Matcher, Object> function ) {
         this.patterns.put( Pattern.compile( pattern ), function );
     }
-
 
     public Object execute() throws ScriptException {
         while ( this.scanner.hasNextLine() ) {
@@ -159,110 +179,8 @@ public class ScriptExecutor {
         return null;
     }
 
-    private void parseWhileBlock( String condition ) throws ScriptException, ReturnValueException {
-        int index = this.scanner.index(); // store the pc of the while statement
-        while ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) {
-            executeInnerBodyTillDone( index );
-        }
-        this.skipToDone(); // skip everything till we see the next done statement
-    }
 
-    private void parseForEachBlock( String variable, Iterable iterable ) throws ScriptException, ReturnValueException {
-        Object oldVal = this.scopedDefinedVariables.get( variable );
-        int index = this.scanner.index(); // store the pc of the while statement
-        Iterator it = iterable.iterator();
-        while ( it.hasNext() ) {
-            this.scopedDefinedVariables.put( variable, it.next() );
-            this.executeInnerBodyTillDone( index );
-        }
-        this.skipToDone();
-        this.scopedDefinedVariables.put( variable, oldVal ); // restore old state
-    }
-
-    private void parseForBlock( String variable, int step, int from, int to ) throws ScriptException, ReturnValueException {
-        Object oldVal = this.scopedDefinedVariables.get( variable );
-        int index = this.scanner.index(); // store the pc of the while statement
-        for ( int i = from; i <= to; i += step ) {
-            this.scopedDefinedVariables.put( variable, i );
-            this.executeInnerBodyTillDone( index );
-        }
-        this.skipToDone();
-        this.scopedDefinedVariables.put( variable, oldVal ); // restore old state
-    }
-
-    private void executeInnerBodyTillDone( int index ) throws ScriptException, ReturnValueException {
-        while ( this.scanner.hasNextLine() ) {
-            String line = stripComment( this.scanner.nextLine().trim() );
-            if ( line.toLowerCase().equals( "done" ) ) {
-                this.scanner.jump( index );
-                return;
-            }
-            parseLine( line );
-        }
-        throw new ScriptException( "Unexpected end of file, missing done statement" );
-    }
-
-    private void skipToDone() {
-        int missingDoneStatements = 1;
-        while ( scanner.hasNextLine() ) {
-            String lowerCase = scanner.nextLine().toLowerCase().trim();
-            if ( lowerCase.startsWith( "while " ) || lowerCase.startsWith( "foreach " ) || lowerCase.startsWith( "for " ) ) {
-                missingDoneStatements++;
-            } else if ( lowerCase.equals( "done" ) ) {
-                missingDoneStatements--;
-            }
-            if ( missingDoneStatements <= 0 ) {
-                break;
-            }
-        }
-    }
-
-    private void parseIfBlock( String condition ) throws ScriptException, ReturnValueException {
-        if ( Objects.equals( Boolean.TRUE, evalExpression( condition ) ) ) { // eval expression and check if it is true
-            boolean inElse = false;
-            while ( this.scanner.hasNextLine() ) {
-                String line = scanner.nextLine().trim();
-                String lowerCase = line.toLowerCase();
-                if ( lowerCase.equals( "else" ) ) {
-                    inElse = true;
-                    continue;
-                }
-                if ( lowerCase.equals( "fi" ) ) {
-                    return;
-                }
-                if ( !inElse ) {
-                    parseLine( line );
-                }
-            }
-        } else {
-            boolean inElse = false;
-            while ( this.scanner.hasNextLine() ) {
-                String line = scanner.nextLine().trim();
-                String lowerCase = line.toLowerCase();
-                if ( lowerCase.equals( "else" ) ) {
-                    inElse = true;
-                    continue;
-                }
-                if ( lowerCase.equals( "fi" ) ) {
-                    return;
-                }
-                if ( inElse ) {
-                    parseLine( line );
-                }
-            }
-        }
-
-    }
-
-    private String stripComment( String line ) {
-        int firstComment = line.indexOf( "//" );
-        if ( firstComment >= 0 ) {
-            line = line.substring( 0, firstComment ).trim();
-        }
-        return line;
-    }
-
-    private void parseLine( String line ) throws ScriptException, ReturnValueException {
+    public void parseLine( String line ) throws ScriptException, ReturnValueException {
         //  System.out.println( "Parse line " + line );
         if ( line.equals( "/*" ) ) {
             do {
@@ -276,7 +194,7 @@ public class ScriptExecutor {
             }
             line = scanner.nextLine().trim();
         }
-        line = stripComment( line ).trim();
+        line = InterpreterUtils.stripComment( line ).trim();
         if ( !line.isEmpty() ) {
             Matcher matcher = letPattern.matcher( line );
             if ( matcher.find() ) {
@@ -286,15 +204,15 @@ public class ScriptExecutor {
             } else {
                 String lowerLine = line.toLowerCase();
                 if ( lowerLine.startsWith( "if " ) ) {
-                    parseIfBlock( line.substring( "if ".length() ) );
+                    getBlock( IfOptElseBlock.class ).parseIfBlock( line.substring( "if ".length() ) );
                 } else if ( lowerLine.startsWith( "while " ) ) {
-                    parseWhileBlock( line.substring( "while ".length() ) );
+                    getBlock( WhileBlock.class ).parseWhileBlock( line.substring( "while ".length() ) );
                 } else if ( lowerLine.equals( "return" ) ) {
                     throw new ReturnValueException( null );
                 } else if ( lowerLine.startsWith( "return " ) ) {
                     throw new ReturnValueException( evalExpression( line.substring( "return ".length() ) ) );
                 } else if ( ( matcher = functionPattern.matcher( line ) ).matches() ) {
-                    parseFunction( matcher.group( 1 ), matcher.group( 2 ) );
+                    getBlock( FunctionBlock.class ).parseFunction( matcher.group( 1 ), matcher.group( 2 ) );
                 } else if ( ( matcher = suffixFunctionPattern.matcher( line ) ).matches() ) {
                     Object oldValue = this.scopedDefinedVariables.get( matcher.group( 1 ) );
                     this.scopedDefinedVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ), oldValue, evalExpression( matcher.group( 3 ) ) ) );
@@ -302,14 +220,14 @@ public class ScriptExecutor {
                     Object oldValue = this.scopedDefinedVariables.get( matcher.group( 1 ) );
                     this.scopedDefinedVariables.put( matcher.group( 1 ), executeFunction( matcher.group( 2 ).substring( 0, 1 ), oldValue, 1 ) );
                 } else if ( ( matcher = this.forEachPattern.matcher( line ) ).matches() ) {
-                    parseForEachBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 2 ) ), Iterable.class, false ) );
+                    getBlock( ForEachBlock.class ).parseForEachBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 2 ) ), Iterable.class, false ) );
                 } else if ( ( matcher = this.forPattern.matcher( line ) ).matches() ) {
                     if ( matcher.group( 2 ) != null ) { // with step
-                        parseForBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 3 ) ), Number.class, false ).intValue(),
+                        getBlock( ForBlock.class ).parseForBlock( matcher.group( 1 ), Types.ensureType( evalExpression( matcher.group( 3 ) ), Number.class, false ).intValue(),
                                 Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
                                 Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
                     } else {
-                        parseForBlock( matcher.group( 1 ), 1,
+                        getBlock( ForBlock.class ).parseForBlock( matcher.group( 1 ), 1,
                                 Types.ensureType( evalExpression( matcher.group( 4 ) ), Number.class, false ).intValue(),
                                 Types.ensureType( evalExpression( matcher.group( 5 ) ), Number.class, false ).intValue() );
                     }
@@ -321,39 +239,6 @@ public class ScriptExecutor {
         }
     }
 
-    private String[] parseArgumentNames( String raw ) throws ScriptException {
-        String[] split = raw.split( "," );
-        String[] o = new String[split.length];
-        int i = 0;
-        for ( String s : split ) {
-            s = s.trim();
-            if ( s.isEmpty() || !StringChecker.isCorrectVariableName( s ) ) {
-                throw new ScriptException( "Invalid variable name " + s );
-            }
-            o[i] = s;
-            i++;
-        }
-        return o;
-    }
-
-    private void parseFunction( String functionName, String rawArguments ) throws ScriptException {
-        if ( this.functionManager.isFunctionPresent( functionName ) ) {
-            throw new ScriptException( "Function " + functionName + " is already registered" );
-        }
-        functionName = functionName.toLowerCase();
-        String[] argumentNames = parseArgumentNames( rawArguments );
-        List<String> scanned = new LinkedList<>();
-        while ( this.scanner.hasNextLine() ) {
-            String line = this.scanner.nextLine();
-            if ( line.trim().toLowerCase().equals( "end function" ) ) {
-                this.functionManager.register( new UserDefinedFunction( functionName, scanned.toArray( new String[0] ), argumentNames, functionManager.getFunctions() ), functionName );
-                return;
-            } else {
-                scanned.add( line );
-            }
-        }
-        throw new ScriptException( "Unexpected end of file, expected 'end function'" );
-    }
 
     public Map<String, Object> getVariables() {
         return this.scopedDefinedVariables;
@@ -369,38 +254,14 @@ public class ScriptExecutor {
         if ( number != null ) {
             return number;
         }
-        if ( s.equalsIgnoreCase( "true" ) ) {
-            return Boolean.TRUE;
+        String lowerRegion = s.toLowerCase();
+        if ( this.directAssociatedValues.containsKey( lowerRegion ) ) { // map may contain null values as well
+            return this.directAssociatedValues.get( lowerRegion );
         }
-        if ( s.equalsIgnoreCase( "false" ) ) {
-            return Boolean.FALSE;
-        }
-        if ( s.equalsIgnoreCase( "null" ) || s.equalsIgnoreCase( "nil" ) || s.equalsIgnoreCase( "undefined" ) ) {
-            return null;
-        }
-
         if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) {
-            if( s.length() == 1 ) { // something we cannot parse
-                throw new ScriptException( "Cannot parse a single \"" );
-            }
-            if( s.length() == 2 ) {
-                return ""; // empty string
-            }
-            char lastChar = ' ';
-            int i = 1;
-            char[] asArray = s.toCharArray();
-            boolean isValidString = true;
-            while ( i < s.length() - 1 ) {
-                char next = asArray[i];
-                if(next == '"' && lastChar != '\\') {
-                    isValidString = false;
-                    break;
-                }
-                lastChar = next;
-                i++;
-            }
-            if( isValidString ) {
-                return s.substring( 1, s.length() - 1 ).replace( "\\\"","\"" );
+            String m = InterpreterUtils.validateStringCandidate( s );
+            if ( m != null ) {
+                return m;
             }
         }
 
@@ -411,7 +272,7 @@ public class ScriptExecutor {
             }
         }
 
-        if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) {
+        if ( s.startsWith( "\"" ) && s.endsWith( "\"" ) ) { // todo maybe comment out?
             return s.length() == 2 ? "" : s.substring( 1, s.length() - 1 );
         }
 

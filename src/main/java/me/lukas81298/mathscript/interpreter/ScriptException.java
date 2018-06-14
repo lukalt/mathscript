@@ -1,4 +1,4 @@
-package me.lukas81298.mathscript.parser;
+package me.lukas81298.mathscript.interpreter;
 
 /**
  * @author lukas

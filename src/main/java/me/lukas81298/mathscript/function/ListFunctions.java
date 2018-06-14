@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 import me.lukas81298.mathscript.struct.InternalArrayList;
 
 import java.util.*;
@@ -17,7 +17,7 @@ public class ListFunctions {
     public static class ListFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) {
+        public Object execute( BaseInterpreter env, Object... arguments ) {
             return new InternalArrayList<>( Arrays.asList( arguments ) );
         }
 
@@ -30,7 +30,7 @@ public class ListFunctions {
     public static class ListPopFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             if(list.isEmpty()) {
                 return null;
@@ -52,7 +52,7 @@ public class ListFunctions {
     public static class ListContainsFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             Object o = Types.ensureNotNull( arguments[1] );
             return list.contains( o );
@@ -72,7 +72,7 @@ public class ListFunctions {
     public static class ListGetFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             int index = Types.ensureType( arguments[0], Number.class, false ).intValue();
             return list.get( index );
@@ -92,7 +92,7 @@ public class ListFunctions {
     public static class ListAddFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             list.add( arguments[1] );
             return list;
@@ -112,7 +112,7 @@ public class ListFunctions {
     public static class ListSortFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             Collections.sort( list );
             return list;
@@ -132,7 +132,7 @@ public class ListFunctions {
     public static class ListCopyFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             List out = new InternalArrayList( list );
             return out;
@@ -152,7 +152,7 @@ public class ListFunctions {
     public static class ListDSortFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             Collections.sort( list );
             Collections.reverse( list );
@@ -173,7 +173,7 @@ public class ListFunctions {
     public static final class ListReverseFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             Collections.reverse( list );
             return list;
@@ -193,7 +193,7 @@ public class ListFunctions {
     public static class ListShuffleFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             Collections.shuffle( list );
             return list;
@@ -213,7 +213,7 @@ public class ListFunctions {
     public static class ListRemoveFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List<Object> list = Types.ensureType( arguments[0], List.class, false );
             list.remove( arguments[1] );
             return list;
@@ -233,7 +233,7 @@ public class ListFunctions {
     public static class ListClearFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             List list = Types.ensureType( arguments[0], List.class, false );
             list.clear();
             return list;

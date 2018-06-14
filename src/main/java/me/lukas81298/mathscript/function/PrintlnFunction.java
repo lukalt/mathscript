@@ -1,6 +1,6 @@
 package me.lukas81298.mathscript.function;
 
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 /**
  * @author lukas
@@ -9,7 +9,7 @@ import me.lukas81298.mathscript.parser.ScriptExecutor;
 public class PrintlnFunction implements Function {
 
     @Override
-    public Object execute( ScriptExecutor env, Object... arguments ) {
+    public Object execute( BaseInterpreter env, Object... arguments ) {
         if(arguments.length == 0) {
             System.out.println();
             return null;

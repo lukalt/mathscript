@@ -1,7 +1,7 @@
 package me.lukas81298.mathscript.function;
 
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 import me.lukas81298.mathscript.util.SneakyThrow;
 
 import java.util.*;
@@ -126,7 +126,7 @@ public class FunctionManager {
         return this.functionMap.containsKey( name.toLowerCase() );
     }
 
-    public Object executeFunction( ScriptExecutor executor, String name, Object... parameters ) throws ScriptException {
+    public Object executeFunction( BaseInterpreter executor, String name, Object... parameters ) throws ScriptException {
         //System.out.println( "Exec function " + name + "(" + Arrays.toString( parameters ) + ")" );
         name = name.toLowerCase();
         Function f = this.functionMap.get( name );

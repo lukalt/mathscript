@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function.udf;
 
 import me.lukas81298.mathscript.function.Function;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 import me.lukas81298.mathscript.util.ScriptScannerArray;
 
 import java.util.HashMap;
@@ -27,14 +27,14 @@ public class UserDefinedFunction implements Function {
     }
 
     @Override
-    public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+    public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
         Map<String, Object> args = new HashMap<>();
         for ( int i = 0; i < this.argumentNames.length; i++ ) {
             args.put( argumentNames[i], arguments[i] );
         }
 
-        ScriptExecutor scriptExecutor = new ScriptExecutor( new ScriptScannerArray( functionBody ), args, inheritedFunctions );
-        return scriptExecutor.execute();
+        BaseInterpreter baseInterpreter = new BaseInterpreter( new ScriptScannerArray( functionBody ), args, inheritedFunctions );
+        return baseInterpreter.execute();
     }
 
     @Override

@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 /**
  * @author lukas
@@ -13,7 +13,7 @@ public class BoolFunctions {
     public final static class NegFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return !Types.ensureType(arguments[0], Boolean.class, false);
         }
 

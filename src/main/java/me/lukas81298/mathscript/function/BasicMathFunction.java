@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 /**
  * @author lukas
@@ -13,7 +13,7 @@ public class BasicMathFunction {
     public static final class ExpFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Math.exp( Types.ensureType( arguments[0], Number.class, false ).doubleValue() );
         }
 
@@ -31,7 +31,7 @@ public class BasicMathFunction {
     public static final class LnFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Math.log( Types.ensureType( arguments[0], Number.class, false ).doubleValue() );
         }
 
@@ -49,7 +49,7 @@ public class BasicMathFunction {
     public static final class LogFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             double base = 10;
             double value;
             if(arguments.length == 2) {
@@ -78,7 +78,7 @@ public class BasicMathFunction {
     public static final class SgnFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             Number number = Types.ensureType( arguments[0], Integer.class, false );
             if(number.intValue() == 0) {
                 return 0;
@@ -102,7 +102,7 @@ public class BasicMathFunction {
     public static final class AbsFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             Number n = Types.ensureType( arguments[0], Number.class, false );
             if( n instanceof Long ) {
                 return Math.abs( n.longValue() );
@@ -128,7 +128,7 @@ public class BasicMathFunction {
     public static final class PowFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Math.pow( Types.ensureType( arguments[0], Number.class, false ).doubleValue(), Types.ensureType( arguments[1], Number.class, false ).doubleValue() );
         }
 
@@ -146,7 +146,7 @@ public class BasicMathFunction {
     public static final class SqrtFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             double d = Types.ensureType( arguments[0], Number.class, false ).doubleValue();
             return Math.sqrt( d );
         }

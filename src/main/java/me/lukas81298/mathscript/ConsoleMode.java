@@ -1,7 +1,7 @@
 package me.lukas81298.mathscript;
 
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 import me.lukas81298.mathscript.util.ScriptScannerStream;
 
 /**
@@ -11,7 +11,7 @@ import me.lukas81298.mathscript.util.ScriptScannerStream;
 public class ConsoleMode {
 
     public static void main( String[] args ) {
-        ScriptExecutor executor = new ScriptExecutor( new ScriptScannerStream( System.in ) );
+        BaseInterpreter executor = new BaseInterpreter( new ScriptScannerStream( System.in ) );
         while ( true ) {
             try {
                 executor.execute();

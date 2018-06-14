@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 import java.util.Objects;
 
@@ -15,7 +15,7 @@ public class CompareInfixFunctions {
     public final static class LowerEqFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Types.ensureType( arguments[0], Number.class, false ).doubleValue() <= Types.ensureType( arguments[1], Number.class, false ).doubleValue();
         }
 
@@ -34,7 +34,7 @@ public class CompareInfixFunctions {
     public final static class GreaterEqFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Types.ensureType( arguments[0], Number.class, false ).doubleValue() >= Types.ensureType( arguments[1], Number.class, false ).doubleValue();
         }
 
@@ -53,7 +53,7 @@ public class CompareInfixFunctions {
     public final static class LowerFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Types.ensureType( arguments[0], Number.class, false ).doubleValue() < Types.ensureType( arguments[1], Number.class, false ).doubleValue();
         }
 
@@ -72,7 +72,7 @@ public class CompareInfixFunctions {
     public final static class GreaterFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             return Types.ensureType( arguments[0], Number.class, false ).doubleValue() > Types.ensureType( arguments[1], Number.class, false ).doubleValue();
         }
 
@@ -91,7 +91,7 @@ public class CompareInfixFunctions {
     public final static class NotEqualsFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) {
+        public Object execute( BaseInterpreter env, Object... arguments ) {
             Object o1 = arguments[0];
             Object o2 = arguments[1];
             return !Objects.equals( o1, o2 );
@@ -111,7 +111,7 @@ public class CompareInfixFunctions {
     public final static class EqualsFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) {
+        public Object execute( BaseInterpreter env, Object... arguments ) {
             Object o1 = arguments[0];
             Object o2 = arguments[1];
             return Objects.equals( o1, o2 );

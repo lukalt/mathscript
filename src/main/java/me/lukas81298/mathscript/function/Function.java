@@ -1,7 +1,7 @@
 package me.lukas81298.mathscript.function;
 
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 /**
  * @author lukas
@@ -9,7 +9,7 @@ import me.lukas81298.mathscript.parser.ScriptExecutor;
  */
 public interface Function {
 
-    Object execute( ScriptExecutor env, Object... arguments) throws ScriptException;
+    Object execute( BaseInterpreter env, Object... arguments) throws ScriptException;
 
     default Class<?> mapsTo() {
         return Void.class;

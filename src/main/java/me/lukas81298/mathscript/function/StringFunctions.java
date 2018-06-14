@@ -1,8 +1,8 @@
 package me.lukas81298.mathscript.function;
 
 import me.lukas81298.mathscript.Types;
-import me.lukas81298.mathscript.parser.ScriptException;
-import me.lukas81298.mathscript.parser.ScriptExecutor;
+import me.lukas81298.mathscript.interpreter.ScriptException;
+import me.lukas81298.mathscript.interpreter.BaseInterpreter;
 
 /**
  * @author lukas
@@ -13,7 +13,7 @@ public class StringFunctions {
     public static final class StringReverseFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             String src = Types.ensureType( arguments[0], String.class, false );
             char[] srcChars = src.toCharArray();
             char[] destChars = new char[srcChars.length];
@@ -37,7 +37,7 @@ public class StringFunctions {
     public static final class SubstringFunction implements Function {
 
         @Override
-        public Object execute( ScriptExecutor env, Object... arguments ) throws ScriptException {
+        public Object execute( BaseInterpreter env, Object... arguments ) throws ScriptException {
             String source = Types.ensureType(arguments[0], String.class, false);
             int i1 = Types.ensureType( arguments[1], Number.class, false).intValue();
             if(arguments.length == 3) {
